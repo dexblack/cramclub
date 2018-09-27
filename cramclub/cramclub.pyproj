@@ -22,6 +22,21 @@
   </PropertyGroup>
   <ItemGroup>
     <Compile Include="cramclub.py" />
+    <Compile Include="cramcmd.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="cramlog.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="crampull.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="cramcfg.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="singleton.py">
+      <SubType>Code</SubType>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <Content Include="README.md" />

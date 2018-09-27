@@ -11,6 +11,8 @@ CallHub contacts have a custom ContactID field corresponding to the CiviCRM cont
 """
 import sys
 import argparse
+from cramlog import CramLog
+from cramcfg import CramCfg
 
 
 def get_args(prog, argv):
@@ -27,11 +29,11 @@ def get_args(prog, argv):
 
     parser_start = subparsers.add_parser('start',
                                          description='Execute the updater using the configured schedule')
-    parser_start.add_argument('--civicrm-site-key', required=True,
+    parser_start.add_argument('--civicrm_site_key', required=True,
                         help='CiviCRM Site Key')
-    parser_start.add_argument('--civicrm-api-key', required=True,
+    parser_start.add_argument('--civicrm_api_key', required=True,
                         help='CiviCRM API Key')
-    parser_start.add_argument('--callhub-api-key', required=True,
+    parser_start.add_argument('--callhub_api_key', required=True,
                         help='CallHub API Key')
     parser_start.add_argument('--timeout', type=int, default=5,
                         help='REST API call timeout in seconds')
@@ -44,21 +46,6 @@ def get_args(prog, argv):
     parser_restart.set_defaults(cmd=restart)
 
     return parser.parse_args(argv)
-
-
-def start(args):
-    print('Starting')
-    print(args)
-
-
-def stop(args):
-    print('Stopping')
-    print(args)
-
-
-def restart(args):
-    stop(args)
-    start(args)
 
 
 def main(prog, argv):
