@@ -1,26 +1,28 @@
 """
 Top level commands.
 """
-from cramlog import cramlog
+from cramlog import CramLog
 import crampull
 
-def start(args):
+def start():
     """
-    Read configuration and wait for scheduled update time or stop signal.
+    Use the configuration and wait for scheduled update time or stop signal.
     """
-    print('Starting')
+    logger = CramLog.instance()
+    logger.info('Starting')
     #print(args)
 
 
-def stop(args):
+def stop():
     """
     Create the process stop signal.
     This is a just creating a file named 'stop' in the default configuration directory.
     """
-    print('Stopping')
+    logger = CramLog.instance()
+    logger.info('Stopping')
     #print(args)
 
 
-def restart(args):
-    stop(args)
-    start(args)
+def restart():
+    stop()
+    start()
