@@ -18,7 +18,11 @@ class CramCfg(object):
     def __init__(self, *args, **kwargs):
         logger = CramLog.instance()
 
-        self.cfg = {}
+        self.cfg = {
+            "callhub": {},
+            "civicrm": {},
+            "timeout": 0
+            }
 
         if "CRAMCLUB_CFG_DIR" in os.environ:
             self.cfg_dir = os.environ["CRAMCLUB_CFG_DIR"]
@@ -32,7 +36,7 @@ class CramCfg(object):
         if not hasattr(self, "cfg_dir"):
             raise RuntimeError("CramCfg: Unsupported platform: " + platform.system())
 
-        print("Configuration directory: " + self.cfg_dir.as_posix())
+        logger.info("Configuration directory: " + self.cfg_dir.as_posix())
 
         self.defaults_path = self.cfg_dir / 'defaults.yaml'
         print("Default configuration: " + self.defaults_path.as_posix())
@@ -50,28 +54,33 @@ class CramCfg(object):
         if os.path.exists(self.cfg_path.as_posix()):
             with open(self.cfg_path.as_posix()) as stream:
                 try: 
-                    self.cfg = yaml.load(stream)
+                    self.cfg.update(yaml.load(stream))
                 except yaml.YAMLError as e:
                     logger.critical(str(e))
 
         # Environment values override configuration values
         if "CIVICRM_SITE_KEY" in os.environ:
             self.cfg["civicrm"]["site_key"] = os.environ["CIVICRM_SITE_KEY"]
+
         if "CIVICRM_API_KEY" in os.environ:
             self.cfg["civicrm"]["api_key"] = os.environ["CIVICRM_API_KEY"]
+
         if "CALLHUB_API_KEY" in os.environ:
             self.cfg["callhub"]["api_key"] = os.environ["CALLHUB_API_KEY"]
 
-        #print(self.cfg)
+        #logger.info(self.cfg)
 
 
     def update(self, from_args):
         """Command line arguments override everything"""
-        args = { "civicrm": {}, "callhub": {} }
-        if "civicrm_site_key" in from_args:
-            args["civicrm"]["site_key"] = from_args.civicrm_site_key
-        if "civicrm_api_key" in from_args:
-            args["civicrm"]["api_key"] = from_args.civicrm_api_key
-        if "callhub_api_key" in from_args:
-            args["callhub"]["api_key"] = from_args.callhub_api_key
-        self.cfg.update(args)
+        if "civicrm_site_key" in from_args and from_args.civicrm_site_key:
+            self.cfg["civicrm"]["site_key"] = from_args.civicrm_site_key
+
+        if "civicrm_api_key" in from_args and from_args.civicrm_api_key:
+            self.cfg["civicrm"]["api_key"] = from_args.civicrm_api_key
+
+        if "callhub_api_key" in from_args and from_args.callhub_api_key:
+            self.cfg["callhub"]["api_key"] = from_args.callhub_api_key
+
+        if "timeout" in from_args and from_args.timeout:
+            self.cfg["timeout"] = from_args.timeout
