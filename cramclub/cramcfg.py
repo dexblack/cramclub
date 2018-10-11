@@ -19,33 +19,39 @@ class CramCfg(object):
         logger = CramLog.instance()
 
         self.cfg = {
+            "dir": None,
             "callhub": {},
             "civicrm": {},
-            "timeout": 0
+            "timeout": 0,
+            "runat": None,
+            "stop_file_path": None
             }
 
+        # Override platform dependent configuration location.
         if "CRAMCLUB_CFG_DIR" in os.environ:
-            self.cfg_dir = os.environ["CRAMCLUB_CFG_DIR"]
+            self.cfg["dir"] = PurePath(os.environ["CRAMCLUB_CFG_DIR"])
 
-        if not hasattr(self, "cfg_dir"):
+        if not self.cfg["dir"]:
             if platform.system() == "Linux":
-                self.cfg_dir = PurePath("/") / "etc" / cramconst.APP_NAME
+                self.cfg["dir"] = PurePath("/") / "etc" / cramconst.APP_NAME
             elif platform.system() == "Windows":
-                self.cfg_dir = PurePath(os.environ["PROGRAMDATA"]) / cramconst.APP_NAME
+                self.cfg["dir"] = PurePath(os.environ["PROGRAMDATA"]) / cramconst.APP_NAME
 
-        if not hasattr(self, "cfg_dir"):
+        if not self.cfg["dir"]:
             raise RuntimeError("CramCfg: Unsupported platform: " + platform.system())
 
-        logger.info("Configuration directory: " + self.cfg_dir.as_posix())
+        logger.info("Configuration directory: " + self.cfg["dir"].as_posix())
 
-        self.defaults_path = self.cfg_dir / 'defaults.yaml'
+        self.cfg["stop_file_path"] = (self.cfg["dir"] / "cramclub.stop").as_posix()
+
+        self.defaults_path = self.cfg["dir"] / 'defaults.yaml'
         print("Default configuration: " + self.defaults_path.as_posix())
-        if os.path.exists(self.cfg_dir):
-            self.cfg_path = self.cfg_dir / self._CFG_FILE_NAME
+        if os.path.exists(self.cfg["dir"]):
+            self.cfg_path = self.cfg["dir"] / self._CFG_FILE_NAME
             print("Configuration file path: " + self.cfg_path.as_posix())
 
-        if os.path.exists(self.cfg_dir / 'defaults.yaml'):
-            with open((self.cfg_dir / 'defaults.yaml').as_posix()) as stream:
+        if os.path.exists(self.cfg["dir"] / 'defaults.yaml'):
+            with open((self.cfg["dir"] / 'defaults.yaml').as_posix()) as stream:
                 try: 
                     self.cfg = yaml.load(stream)
                 except yaml.YAMLError as e:
@@ -68,6 +74,9 @@ class CramCfg(object):
         if "CALLHUB_API_KEY" in os.environ:
             self.cfg["callhub"]["api_key"] = os.environ["CALLHUB_API_KEY"]
 
+        if "CRAMCLUB_RUNAT" in os.environ:
+            self.cfg["runat"] = os.environ["CRAMCLUB_RUNAT"]
+
         #logger.info(self.cfg)
 
 
@@ -84,3 +93,6 @@ class CramCfg(object):
 
         if "timeout" in from_args and from_args.timeout:
             self.cfg["timeout"] = from_args.timeout
+
+        if "runat" in from_args and from_args.runat:
+            self.cfg["runat"] = from_args.runat

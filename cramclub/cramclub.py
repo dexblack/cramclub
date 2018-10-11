@@ -20,6 +20,8 @@ def get_args(prog, argv):
     """
     Parse command line and execute the required operation.
     """
+    logger = CramLog.instance()
+    logger.info("get_args: " + prog)
     parser = argparse.ArgumentParser(
         description='CiviCRM smart groups to CallHub phonebooks updater.')
 
@@ -33,6 +35,7 @@ def get_args(prog, argv):
     parser_start.add_argument('--civicrm_api_key', help='CiviCRM API Key')
     parser_start.add_argument('--callhub_api_key', help='CallHub API Key')
     parser_start.add_argument('--timeout', type=int, default=5, help='REST API call timeout in seconds')
+    parser_start.add_argument('--runat', help='Time of day to run the job')
     parser_start.set_defaults(cmd=cramcmd.start)
 
     parser_stop = subparsers.add_parser('stop', description='Halt a running updater')

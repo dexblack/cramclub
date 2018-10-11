@@ -13,7 +13,7 @@
     <RootNamespace>cramclub</RootNamespace>
     <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>start --civicrm_site_key abcd</CommandLineArguments>
+    <CommandLineArguments>start --civicrm_site_key abcd --civicrm_api_key jklmn</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
     <Environment>CALLHUB_API_KEY=efghi</Environment>
   </PropertyGroup>
@@ -33,6 +33,9 @@
     <Compile Include="cramconst.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="cramio.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="cramlog.py">
       <SubType>Code</SubType>
     </Compile>
@@ -42,9 +45,7 @@
     <Compile Include="cramcfg.py">
       <SubType>Code</SubType>
     </Compile>
-    <Compile Include="singleton.py">
-      <SubType>Code</SubType>
-    </Compile>
+    <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
     <Content Include="README.md" />

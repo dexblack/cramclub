@@ -1,21 +1,28 @@
 """
 Retrieve CiviCRM group contact list data.
 """
-import requests
-import cramcfg
+from singleton.singleton import Singleton
+from civicrm import *
+from cramcfg import CramCfg 
 
 
-class crampull(object):
-    """CiviCRM wrapper class"""
+@Singleton
+class CramPull(object):
+    """CiviCRM API wrapper class"""
+    _api = None
+
     def __init__(self, *args, **kwargs):
-        self.api_key = cramcfg.civicrm_api_key
-        self.site_key = cramcfg.civicrm_site_key
+        cfg = CramCfg.instance()
 
-    def configure(self):
-        pass
+        self._api = CiviCRM(
+            url = cfg.civicrm.url,
+            site_key = cfg.civicrm.site_key,
+            api_key = cfg.civicrm.api_key,
+            use_ssl = True,
+            timeout = cfg.timeout)
 
-    def contacts(self):
-        return []
+    def contact(self, id):
+        return self._api.get('Contact', { 'id': id });
 
     def group(self, id):
-        return {}
+        return self._api.get('Group', { 'id': id });
