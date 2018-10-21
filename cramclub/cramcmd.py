@@ -13,7 +13,7 @@ def start():
     Start a thread to do the work.
     """
     logger = CramLog.instance()
-    logger.info('Starting')
+    logger.info("Starting")
     #logger.info(args)
     cram = CramCfg.instance()
     if os.path.exists(cram.cfg["stop_file_path"]):
@@ -31,7 +31,7 @@ def stop():
     """
     cram = CramCfg.instance()
     logger = CramLog.instance()
-    logger.info('Stopping')
+    logger.info("Stopping")
     #logger.info(args)
     with open(cram.cfg["stop_file_path"], "w") as f:
         f.write("Stop CramClub process running")
