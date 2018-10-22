@@ -78,11 +78,11 @@ class CramCfg(object):
             self.cfg["runat"] = os.environ["CRAMCLUB_RUNAT"]
 
         # Remove trailing slash from URLs
-        if cram.cfg["civicrm"]["url"][-1:] == '/':
-            cram.cfg["civicrm"]["url"] = cram.cfg["civicrm"]["url"][0:-1]
+        if self.cfg["civicrm"]["url"][-1:] == '/':
+            self.cfg["civicrm"]["url"] = self.cfg["civicrm"]["url"][0:-1]
 
-        if cram.cfg["callhub"]["url"][-1:] == '/':
-            cram.cfg["callhub"]["url"] = cram.cfg["callhub"]["url"][0:-1]
+        if self.cfg["callhub"]["url"][-1:] == '/':
+            self.cfg["callhub"]["url"] = self.cfg["callhub"]["url"][0:-1]
 
         #logger.info(self.cfg)
 

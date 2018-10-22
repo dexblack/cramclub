@@ -13,9 +13,10 @@
     <RootNamespace>cramclub</RootNamespace>
     <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>start --civicrm_site_key abcd --civicrm_api_key jklmn</CommandLineArguments>
+    <CommandLineArguments>start</CommandLineArguments>
     <EnableNativeCodeDebugging>False</EnableNativeCodeDebugging>
-    <Environment>CALLHUB_API_KEY=efghi</Environment>
+    <Environment>
+    </Environment>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DebugSymbols>true</DebugSymbols>
@@ -26,6 +27,9 @@
     <EnableUnmanagedDebugging>false</EnableUnmanagedDebugging>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="callhub.py">
+      <SubType>Code</SubType>
+    </Compile>
     <Compile Include="cramclub.py" />
     <Compile Include="cramcmd.py">
       <SubType>Code</SubType>
