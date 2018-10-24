@@ -11,7 +11,7 @@ from callhub import CallHub, missing_crm_contacts
 
 
 
-def process_group(crm, club, group, crm_ch_id_map, logger):
+def process_group(crm, club, group, crm_ch_id_map, rocket_url, logger):
     """
     Pull the contact list for the group from CiviCRM,
     then update corresponding CallHub phonebook.
@@ -59,4 +59,5 @@ def process_groups():
                           club=club,
                           group=group,
                           crm_ch_id_map=crm_ch_id_map,
+                          rocket_url=cram.cfg["rocket"]["url"],
                           logger=logger)

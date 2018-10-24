@@ -4,37 +4,18 @@ Wrapper for CallHub operations.
 from requests import get, put, post, delete
 import json
 from singleton.singleton import Singleton
+from cramlog import CramLog
 from cramcfg import CramCfg
 from cramconst import CUSTOM_FIELD_FEDERAL, CUSTOM_FIELD_STATE, CUSTOM_FIELD_CONTACTID
 
 
-def missing_callhub_contacts(cram, club):
+def missing_callhub_contacts(crm_contacts, crm_ch_id_map):
     """Remove callhub (club) entries found in CiviCRM (cram) list"""
-    crmids = [crm_contact["id"] for crm_contact in cram]
     # This depends on the custom CallHub field "ContactID"
-    return [ch_contact["id"] for ch_contact in club
-            if ch_contact["ContactID"] not in crmids]
-
-
-def make_callhub_contact_from(civicrm_url, crm_contact):
-    """Extract and transform"""
-    return {
-        "contact": crm_contact["phone"],
-        "mobile": crm_contact["phone"] if crm_contact["phone"][0:2] == "04" else "",
-        "last_name": crm_contact["last_name"],
-        "first_name": crm_contact["first_name"],
-        "country_code": "AU",
-        "email": crm_contact["email"],
-        "address": crm_contact["street_address"],
-        "city": crm_contact["city"],
-        "state": crm_contact["state_province"],
-        "company_name": crm_contact[""],
-        "company_website": civicrm_url + "/" + crm_contact["contact_id"],
-        "custom_fields": {
-            CUSTOM_FIELD_FEDERAL: crm_contact[""],
-            CUSTOM_FIELD_STATE: crm_contact[""],
-            CUSTOM_FIELD_CONTACTID: crm_contact["contact_id"]}
-        }
+    # O(NxN) averted through use of dict lookup.
+    missing = [ch_contact["id"] for ch_contact in ch_contacts
+               if ch_contact["ContactID"] not in crm_ch_id_map]
+    return missing
 
 
 def gather_callhub_ids(id_map, callhub_contacts):
@@ -48,11 +29,11 @@ def gather_callhub_ids(id_map, callhub_contacts):
             id_map[crm_id] = callhub_contact["id"]
 
 
-def missing_crm_contacts(cram, callhub_crm_map):
+def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     """Return new list from cram that only has the contacts missing from club"""
-    ch_ids = [elem["ch"] for elem in callhub_crm_map]
-    missing = [crm_contact for crm_contact in cram
-               if crm_contact["id"] in ch_ids]
+    # Another O(N) operation dodged with dict lookup.
+    missing = [crm_contact for crm_contact in crm_contacts
+               if crm_contact["id"] not in crm_ch_id_map]
     return missing
 
 
@@ -67,9 +48,11 @@ class CallHub(object):
         cram = CramCfg.instance()
         self.url = cram.cfg["callhub"]["url"]
         self.civicrm_url = cram.cfg["civicrm"]["url"]
+        self.rocket_url = cram.cfg["rocket"]["url"]
         self.headers = {
             "Authorization": "Token " + cram.cfg["callhub"]["api_key"],
             }
+        self.logger = CramLog.instance()
 
 
     def contacts(self):
@@ -81,7 +64,7 @@ class CallHub(object):
         crm_ch_id_map = {}
         gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=content)
 
-        for page in range(2, int(int(content["count"])/10) + 2):
+        for page in range(2, int(int(content["count"]) / 10) + 2):
             response = get(all_contacts + "?page=%d" % page, self.headers)
             content = json.loads(response.content)
             gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=content)
@@ -113,21 +96,53 @@ class CallHub(object):
         assert delete_result["count"] == "0"
 
 
-    def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
+    def make_callhub_contact_from(civicrm_url, crm_contact):
+        """Extract and transform"""
+        return {
+            "contact": crm_contact["phone"],
+            "mobile": crm_contact["phone"] if crm_contact["phone"][0:2] == "04" else "",
+            "last_name": crm_contact["last_name"],
+            "first_name": crm_contact["first_name"],
+            "country_code": "AU",
+            "email": crm_contact["email"],
+            "address": crm_contact["street_address"],
+            "city": crm_contact["city"],
+            "state": crm_contact["state_province"],
+            "company_name": crm_contact[""],
+            "company_website": self.rocket_url + "/" + crm_contact["contact_id"],
+            "custom_fields": {
+                CUSTOM_FIELD_FEDERAL: crm_contact[""],
+                CUSTOM_FIELD_STATE: crm_contact[""],
+                CUSTOM_FIELD_CONTACTID: crm_contact["contact_id"]}
+            }
+
+
+    def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map, rocket_url):
         """Create all contacts and add them to phonebook"""
 
         # Remove contacts not in the new list
-        remove_ch_contacts = missing_callhub_contacts(cram=crm_contacts,
-                                                      club=all_ch_contacts)
+        remove_ch_contacts = missing_callhub_contacts(crm_contacts=crm_contacts,
+                                                      crm_ch_id_map=crm_ch_id_map)
 
         clear_result = phonebook_clear(phonebook_id=phonebook_id,
                                        contact_ids=remove_ch_contacts)
 
         phonebook_contacts = "%s/%d/contacts" % [self.url, phonebook_id]
-        create_contact = self.url + "/contacts"
+        phonebook_create_contact = self.url + '/phonebooks/' + phonebook_id + "/create_contact"
 
         # Identify new CRM contacts
-        ## Note: Without the dict map this would be take order N squared time!
-        new_contacts = [crm_contact in crm_contacts if crm_contacts["id"] in crm_ch_id_map]
-        callhub_contacts = [make_callhub_contact_from(self.civicrm_url, contact)
-                            for contact in new_contacts]
+
+        ## Note: Without the dict map this would be O(N*N)!
+        new_crm_contacts = missing_crm_contacts(crm_contacts, crm_ch_id_map)
+
+        new_callhub_contacts = [make_callhub_contact_from(crm_contact)
+                                for crm_contact in new_crm_contacts]
+        # Add them to the phonebook
+        for ch_contact in new_callhub_contacts:
+            add_result = post(url=create_phonebook_contact, headers=self.headers, data=ch_contact)
+            if add_result.ok:
+                self.logger.info(add_result.content)
+            else:
+                self.logger.debug(add_result)
+
+        # 
