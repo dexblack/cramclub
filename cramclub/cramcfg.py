@@ -3,9 +3,9 @@ Configuration values.
 """
 import os
 import platform
+from pathlib import PurePath
 import yaml
 from singleton.singleton import Singleton
-from pathlib import PurePath
 from cramlog import CramLog
 from cramconst import APP_NAME, dot_or_nothing
 
@@ -17,8 +17,8 @@ class CramCfg(object):
     _CFG_FILE_NAME = APP_NAME
 
     def __init__(self, *args, **kwargs):
-        self.logger = CramLog.instance()
-
+        self.logger = CramLog.instance() # pylint: disable-msg=E1102
+        assert not args
         self.cfg = {
             'instance': (kwargs['instance'] if 'instance' in kwargs else None),
             'dir': None,
@@ -61,14 +61,14 @@ class CramCfg(object):
 
         if os.path.exists(self.defaults_path.as_posix()):
             with open(self.defaults_path.as_posix()) as stream:
-                try: 
+                try:
                     self.cfg = yaml.load(stream)
                 except yaml.YAMLError as e:
                     self.logger.critical(str(e))
 
         if os.path.exists(self.cfg_path.as_posix()):
             with open(self.cfg_path.as_posix()) as stream:
-                try: 
+                try:
                     self.cfg.update(yaml.load(stream))
                 except yaml.YAMLError as e:
                     self.logger.critical(str(e))
@@ -125,6 +125,7 @@ class CramCfg(object):
         # by mistake and used for the wrong purpose.
         # Internal 'instance' identifier must match the command line.
         self.logger.info('Instance command line: "' + from_args.instance + '"')
+        inst = self.cfg['instance']
         self.logger.info('Instance configuration: ' +
-                         ('"' + self.cfg['instance'] + '"' if self.cfg['instance'] else 'null'))
+                         ('"' + inst + '"' if inst else 'null'))
         assert from_args.instance == self.cfg['instance']

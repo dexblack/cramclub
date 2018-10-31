@@ -12,10 +12,10 @@ def start():
     """
     Start a thread to do the work.
     """
-    logger = CramLog.instance()
+    logger = CramLog.instance() # pylint: disable-msg=E1102
     logger.info("Starting")
     #logger.info(args)
-    cram = CramCfg.instance()
+    cram = CramCfg.instance() # pylint: disable-msg=E1101
     if os.path.exists(cram.cfg["stop_file_path"]):
         os.remove(cram.cfg["stop_file_path"])
 
@@ -29,8 +29,8 @@ def stop():
     This creates a stop file in the default configuration directory.
     The running instance will see it within 1 minute and halt.
     """
-    cram = CramCfg.instance()
-    logger = CramLog.instance()
+    cram = CramCfg.instance() # pylint: disable-msg=E1101
+    logger = CramLog.instance() # pylint: disable-msg=E1102
     logger.info("Stopping")
     #logger.info(args)
     with open(cram.cfg["stop_file_path"], "w") as f:
