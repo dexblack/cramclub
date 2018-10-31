@@ -4,6 +4,7 @@ Wrapper for CallHub operations.
 import json
 from requests import get, post, delete
 from singleton.singleton import Singleton
+
 from cramlog import CramLog
 from cramcfg import CramCfg
 from cramconst import CUSTOM_FIELD_FEDERAL, CUSTOM_FIELD_STATE, CUSTOM_FIELD_CONTACTID
@@ -59,8 +60,6 @@ class CallHub(object):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
         all_contacts = self.url + '/contacts'
 
-        response = get(url=all_contacts, headers=self.headers)
-        content = json.loads(response.content)
         crm_ch_id_map = {}
         gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=content)
 

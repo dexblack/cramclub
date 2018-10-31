@@ -52,7 +52,7 @@ def process_groups():
         start = time.time()
         crm_ch_id_map = club.contacts()
         end = time.time()
-        logger.info("Retrieving CallHub contacts took: %d seconds" % int(end-start))
+        logger.info("Retrieving all CallHub contacts took: %d seconds" % int(end-start))
 
         for group in cram.cfg["groups"]:
             process_group(crm=crmpull,
