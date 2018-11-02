@@ -13,14 +13,13 @@ def start():
     """
     Start doing the work.
     """
-    logger = CramLog.instance() # pylint: disable-msg=E1102
-    logger.info('Starting')
+    #logger = CramLog.instance() # pylint: disable-msg=E1102
+    #logger.info('Starting')
     #logger.info(args)
     cramio = CramIo()
     # Clean up from previous 'stop' command
     if cramio.stop_process():
         os.remove(cramio.cram.cfg['stop_file_path'])
-
 
     # Here is where the work really begins
     while not cramio.stop_process():
@@ -36,12 +35,12 @@ def stop():
     This creates a stop file in the default configuration directory.
     The running instance will see it within 1 minute and halt.
     """
-    cram = CramCfg.instance() # pylint: disable-msg=E1101
-    logger = CramLog.instance() # pylint: disable-msg=E1102
-    logger.info('Stopping')
+    #logger = CramLog.instance() # pylint: disable-msg=E1102
+    #logger.info('Stopping')
     #logger.info(args)
+    cram = CramCfg.instance() # pylint: disable-msg=E1101
     with open(cram.cfg['stop_file_path'], 'w') as f:
-        f.write('Stop CramClub instance running')
+        f.write('Stop CramClub instance "%s" running' % cram.cfg['instance'])
 
 
 def restart():
