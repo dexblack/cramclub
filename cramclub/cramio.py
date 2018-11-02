@@ -3,6 +3,7 @@ Core update code to pull from CiviCRM and push to club.
 """
 import os
 import time
+import csv
 
 from cramcfg import CramCfg
 from cramlog import CramLog
@@ -56,6 +57,24 @@ class CramIo(object):
         self.crm_ch_id_map = self.club.contacts()
         end = time.time()
         self.logger.info("Retrieving all club contacts took: %d seconds" % int(end-start))
+        if ('csv_cache' in self.cram.cfg and
+            'csv_file_path' in self.cram.cfg and
+            'create' in self.cram.cfg['csv_cache'] and
+            self.cram.cfg['csv_cache']['create']
+            ):
+            # Write CSV output of the generated crm ch id mapping.
+            with open(self.cram.cfg['csv_file_path'], 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile, dialect='excel')
+                for id_map_item in self.crm_ch_id_map:
+                    csv_writer.writerow([id_map_item['ch'], id_map_item['crm']])
+                self.logger.info('Created CSV cache file: "%s"' % self.cram.cfg['csv_file_path'])
+
+        if ('csv_cache' in self.cram.cfg and
+            'only' in self.cram.cfg['csv_cache'] and
+            self.cram.cfg['csv_cache']['only']
+            ):
+            # Stop processing here
+            return
 
         self.logger.info('Groups:')
         for group in self.cram.cfg['groups']:

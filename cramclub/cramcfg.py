@@ -42,6 +42,9 @@ class CramCfg(object):
 
         self.logger.info('Configuration directory: ' + self.cfg['dir'].as_posix())
 
+        self.cfg['csv_file_path'] = (self.cfg['dir'] / (
+            APP_NAME + dot_or_nothing(self.cfg['instance']) + '.csv')).as_posix()
+
         self.cfg['stop_file_path'] = (self.cfg['dir'] / (
             APP_NAME + dot_or_nothing(self.cfg['instance']) + '.stop')).as_posix()
         print('Stop file path: ' + self.cfg['stop_file_path'])
