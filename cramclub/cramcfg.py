@@ -14,8 +14,6 @@ from cramconst import APP_NAME, dot_or_nothing
 class CramCfg(object):
     """Singleton Configuration object."""
 
-    _CFG_FILE_NAME = APP_NAME
-
     def __init__(self, *args, **kwargs):
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         assert not args
@@ -45,7 +43,7 @@ class CramCfg(object):
         self.logger.info('Configuration directory: ' + self.cfg['dir'].as_posix())
 
         self.cfg['stop_file_path'] = (self.cfg['dir'] / (
-            'cramclub' + dot_or_nothing(self.cfg['instance']) + '.stop')).as_posix()
+            APP_NAME + dot_or_nothing(self.cfg['instance']) + '.stop')).as_posix()
         print('Stop file path: ' + self.cfg['stop_file_path'])
 
         self.defaults_path = self.cfg['dir'] / (
@@ -55,7 +53,7 @@ class CramCfg(object):
         if os.path.exists(self.cfg['dir']):
             # Build the correct configuration file name for this instance.
             self.cfg_path = self.cfg['dir'] / (
-                self._CFG_FILE_NAME + dot_or_nothing(self.cfg['instance']) + '.yaml')
+                APP_NAME + dot_or_nothing(self.cfg['instance']) + '.yaml')
 
             print('Configuration file path: ' + self.cfg_path.as_posix())
 
