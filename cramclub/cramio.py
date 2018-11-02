@@ -62,4 +62,4 @@ class CramIo(object):
             if self.stop_process():
                 self.logger.info('Stopped before updating phonebook: "%s"' % group['ch'])
                 break
-            process_group(group=group)
+            self.process_group(group=group)
