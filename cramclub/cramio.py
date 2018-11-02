@@ -3,61 +3,63 @@ Core update code to pull from CiviCRM and push to CallHub.
 """
 import os
 import time
+
 from cramcfg import CramCfg
 from cramlog import CramLog
 from cramconst import RETRY_TIME
 from crampull import CramPull
-from callhub import CallHub, missing_crm_contacts
+from callhub import CallHub
 
 
-
-def process_group(crm, club, group, crm_ch_id_map, rocket_url, logger):
-    """
-    Pull the contact list for the group from CiviCRM,
-    then update corresponding CallHub phonebook.
-    """
-    logger.info(' - { crm: "%s", ch: "%s"' % (group["crm"], group["ch"]))
-    crm_contacts = crm.group(group['crm'])  # Ahhh symmetry.
-    club.phonebook_update(phonebook_id=group['ch'],
-                          crm_contacts=crm_contacts,
-                          crm_ch_id_map=crm_ch_id_map)
+class CramIo(object):
+    def __init__(self):
+        self.logger = CramLog.instance() # pylint: disable-msg=E1102
+        self.cram = CramCfg.instance() # pylint: disable-msg=E1102
+        self.crmpull = CramPull.instance() # pylint: disable-msg=E1101
+        self.callhub = CallHub.instance() # pylint: disable-msg=E1101
 
 
-def stop_process(cfg):
-    """Look for process stop file"""
-    return os.path.exists(cfg['stop_file_path'])
+    def start_process():
+        """Check the time to start processing"""
+        when = time.strptime(self.cram.cfg['runat'], '%H:%M')
+        now = time.localtime()
+        start = now.tm_hour == when.tm_hour and (now.tm_min == when.tm_min or True)
+        return start
 
 
-def start_process(cfg):
-    """Check the time to start processing"""
-    when = time.strptime(cfg['runat'], '%H:%M')
-    now = time.localtime()
-    start = now.tm_hour == when.tm_hour and (now.tm_min == when.tm_min or True)
-    return start
+    def stop_process():
+        """Look for process stop file"""
+        return os.path.exists(self.cram.cfg['stop_file_path'])
 
 
-def process_groups():
-    """Use the engine's configuration to control this thread's activity."""
-    logger = CramLog.instance() # pylint: disable-msg=E1102
-    logger.info('groups:')
-    cram = CramCfg.instance() # pylint: disable-msg=E1101
-    crmpull = CramPull.instance() # pylint: disable-msg=E1101
-    club = CallHub.instance() # pylint: disable-msg=E1101
+    def process_group(crm, group):
+        """
+        Pull the contact list for the group from CiviCRM,
+        then update corresponding CallHub phonebook.
+        """
+        self.logger.info(' - { crm: "%s", ch: "%s"' % (group["crm"], group["ch"]))
+        crm_contacts = self.crmpull.group(group['crm'])
 
-    while not stop_process(cram.cfg):
-        if not start_process(cram.cfg):
-            time.sleep(RETRY_TIME)
-            continue
+        if self.stop_process():
+            self.logger.info('Stopping: CallHub phonebook not updated: "%s"' % group['ch'])
+            return
 
+        self.callhub.phonebook_update(
+            phonebook_id=group['ch'],
+            crm_contacts=crm_contacts,
+            crm_ch_id_map=self.crm_ch_id_map)
+
+
+    def process_groups():
+        """Use the engine's configuration to control this thread's activity."""
         start = time.time()
-        crm_ch_id_map = club.contacts()
+        self.crm_ch_id_map = self.callhub.contacts()
         end = time.time()
-        logger.info("Retrieving all CallHub contacts took: %d seconds" % int(end-start))
+        self.logger.info("Retrieving all CallHub contacts took: %d seconds" % int(end-start))
 
-        for group in cram.cfg['groups']:
-            process_group(crm=crmpull,
-                          club=club,
-                          group=group,
-                          crm_ch_id_map=crm_ch_id_map,
-                          rocket_url=cram.cfg['rocket']['url'],
-                          logger=logger)
+        self.logger.info('Groups:')
+        for group in self.cram.cfg['groups']:
+            if self.stop_process():
+                self.logger.info('Stopped before updating phonebook: "%s"' % group['ch'])
+                break
+            process_group(group=group)

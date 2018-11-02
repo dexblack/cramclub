@@ -11,12 +11,14 @@ from cramconst import CUSTOM_FIELDS, CUSTOM_FIELD_FEDERAL, \
                       CUSTOM_FIELD_STATE, CUSTOM_FIELD_CONTACTID
 
 
-def missing_callhub_contacts(ch_contacts, crm_ch_id_map):
-    """Remove callhub (club) entries found in CiviCRM (cram) list"""
-    # This depends on the custom CallHub field 'ContactID'
-    # O(NxN) averted through use of dict lookup.
+def missing_callhub_contacts(ch_contacts, crm_contacts, crm_ch_id_map):
+    """Gather callhub entries not found in CiviCRM id map"""
+    ch_ids = [crm_ch_id_map[crm_contact['contact_id']]
+              for crm_contact in crm_contacts]
+    
     missing = [ch_contact['id'] for ch_contact in ch_contacts
-               if ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID] not in crm_ch_id_map]
+               if ch_contact['id'] not in ch_ids]
+
     return missing
 
 
@@ -39,9 +41,13 @@ def gather_callhub_ids(id_map, callhub_contacts):
 def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     """Return new list from cram that only has the contacts missing from club"""
     # Another O(N) operation dodged with dict lookup.
-    missing = [crm_contact for crm_contact in crm_contacts
-               if crm_contact['id'] not in crm_ch_id_map]
-    return missing
+    missing, remainder = ([], []) # This is the return value
+    for crm_contact in crm_contacts:
+        if crm_contact['id'] in crm_ch_id_map:
+            remainder.append(crm_contact)
+        else:
+            missing.append(crm_contact)
+    return (missing, remainder)
 
 
 
@@ -131,37 +137,66 @@ class CallHub(object):
             }
 
 
+    def phonebook_create_new_contact(self, phonebook_id, ch_contact):
+        phonebook_create_contact = '%s/phonebooks/%s/create_contact' % (self.url, phonebook_id)
+        response = post(url=phonebook_create_contact,
+                        headers=self.headers,
+                        data=ch_contact)
+        self.logger.info(
+            'Phonebook: "%s" New contact: "%s"' %
+            (phonebook_id, ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID]))
+        if response.ok:
+            self.logger.info(response.content)
+        else:
+            self.logger.debug(response)
+        return response
+
+
+    def phonebook_add_existing(self, phonebook_id, ch_contact_ids):
+        phonebook_add_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
+        response = post(url=phonebook_create_contact,
+                        headers=self.headers,
+                        data={'contact_ids': ch_contact_ids)
+        self.logger.info(
+            'Phonebook: "%s" Add existing contact: "%s"' %
+            (phonebook_id, ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID]))
+        if response.ok:
+            self.logger.info(response.content)
+        else:
+            self.logger.debug(response)
+        return response
+
+
+
     def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
         """Create all contacts and add them to phonebook"""
 
-        # Remove contacts not in the new list
-        ch_contacts = self.phonebook_get_contacts(phonebook_id)
-        remove_ch_contacts = missing_callhub_contacts(ch_contacts=ch_contacts,
-                                                      crm_ch_id_map=crm_ch_id_map)
+        # Remove contacts not in the crm_contacts list
+        missing = missing_callhub_contacts(
+            ch_contacts=self.phonebook_get_contacts(phonebook_id),
+            crm_contacts=crm_contacts,
+            crm_ch_id_map=crm_ch_id_map)
 
-        clear_result = self.phonebook_clear(phonebook_id=phonebook_id,
-                                            contact_ids=remove_ch_contacts)
+        clear_result = self.phonebook_clear(
+            phonebook_id=phonebook_id,
+            contact_ids=missing)
+
         assert ('count' in clear_result and
                 clear_result['count'] == len(ch_contacts) - len(remove_ch_contacts))
 
-        phonebook_create_contact = '%s/phonebooks/%s/create_contact' % (self.url, phonebook_id)
 
         # Identify new CRM contacts
         ## Note: Without the dict map this would be O(N*N)!
-        new_crm_contacts = missing_crm_contacts(crm_contacts, crm_ch_id_map)
-        new_callhub_contacts = [self.make_callhub_contact_from(crm_contact)
-                                for crm_contact in new_crm_contacts]
-        # Add them to the phonebook
-        for ch_contact in new_callhub_contacts:
-            add_result = post(url=phonebook_create_contact,
-                              headers=self.headers,
-                              data=ch_contact)
-            self.logger.info(
-                'Phonebook: "%s" New contact: "%s"' %
-                (ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID], phonebook_id))
-            if add_result.ok:
-                self.logger.info(add_result.content)
-            else:
-                self.logger.debug(add_result)
+        missing, remainder = missing_crm_contacts(crm_contacts, crm_ch_id_map)
+        
+        # Create missing contacts in the phonebook
+        for crm_contact in missing:
+            self.phonebook_create_new_contact(
+                phonebook_id,
+                self.make_callhub_contact_from(crm_contact))
 
-        # 
+        # Add the remaining existing contacts to the phonebook
+        self.phonebook_add_existing(
+                phonebook_id,
+                [crm_ch_id_map[crm_contact['contact_id']]
+                 for crm_contact in remainder])
