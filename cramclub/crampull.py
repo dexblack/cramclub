@@ -19,26 +19,31 @@ class CramPull(object):
     def __init__(self, *args, **kwargs):
         cram = CramCfg.instance()
 
+        self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self._api = CiviCRM(
-            url = cram.cfg["civicrm"]["url"],
-            site_key = cram.cfg["civicrm"]["site_key"],
-            api_key = cram.cfg["civicrm"]["api_key"],
+            url = cram.cfg['civicrm']['url'],
+            site_key = cram.cfg['civicrm']['site_key'],
+            api_key = cram.cfg['civicrm']['api_key'],
             use_ssl = True,
-            timeout = cram.cfg["timeout"])
+            timeout = cram.cfg['timeout'])
 
 
     def contact(self, id):
-        return self._api.get("Contact", id=id);
-
+        contact = self._api.get('Contact', id=id);
+        self.logger.debug('Contact: {:s}'.format(str(contact)))
+        return contact
 
     def group(self, group_id):
-        logger = CramLog.instance()
         contacts = []
         try:
-            contacts = self._api.get("Contact", group=[group_id],
-                                    limit=5000, offset=0);
-            logger.info("Contacts: {:d}".format(len(contacts)))
+            contacts = self._api.get('Contact',
+                                     group=[group_id],
+                                     limit=5000,
+                                     offset=0);
+
+            self.logger.info('Contacts: {:d}'.format(len(contacts)))
+
         except ReadTimeout as ce:
-            logger.error(ce)
+            self.logger.error(ce)
 
         return contacts
