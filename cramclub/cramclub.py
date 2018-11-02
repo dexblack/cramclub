@@ -32,28 +32,29 @@ def get_args(argv):
 
     parser_start = subparsers.add_parser('start',
         description='Execute the updater using the configured schedule')
+    parser_start.add_argument('--instance', '-i',
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             required=True)
     parser_start.add_argument('--civicrm_site_key', help='[env] CiviCRM Site key')
     parser_start.add_argument('--civicrm_api_key', help='[env] CiviCRM API key')
     parser_start.add_argument('--callhub_api_key', help='[env] CallHub API key')
     parser_start.add_argument('--timeout', '-t', type=int, help='REST API call timeout in seconds')
     parser_start.add_argument('--runat', '-r', help='Time of day to run the job. [env] CRAMCLUB_RUNAT')
-    parser_start.add_argument('--instance', '-i', help='Which configuration to use;'
-                              + 'e.g. "state" => cramclub.state.yaml', default='')
+
     parser_start.set_defaults(cmd=cramcmd.start)
 
     parser_stop = subparsers.add_parser('stop',
                                         description='Halt a running updater')
     parser_stop.add_argument('--instance', '-i',
-                             help='Which configuration to use; e.g. "state" => cramclub.state.yaml',
-                             default='')
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             required=True)
     parser_stop.set_defaults(cmd=cramcmd.stop)
 
     parser_restart = subparsers.add_parser('restart',
-                                           description='Halt a running updater')
+                                           description='Retarting a running updater')
     parser_restart.add_argument('--instance', '-i',
-                                help='Which configuration to use; ' +
-                                'e.g. "state" => cramclub.state.yaml',
-                                default='')
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             required=True)
     parser_restart.set_defaults(cmd=cramcmd.restart)
 
     args = parser.parse_args(argv)
