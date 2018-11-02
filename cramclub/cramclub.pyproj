@@ -52,9 +52,6 @@
     <Compile Include="__init__.py" />
   </ItemGroup>
   <ItemGroup>
-    <Content Include="README.md" />
-  </ItemGroup>
-  <ItemGroup>
     <Interpreter Include="env\">
       <Id>env</Id>
       <Version>3.6</Version>
