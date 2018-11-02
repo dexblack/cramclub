@@ -1,5 +1,5 @@
 """
-Core update code to pull from CiviCRM and push to CallHub.
+Core update code to pull from CiviCRM and push to club.
 """
 import os
 import time
@@ -16,10 +16,10 @@ class CramIo(object):
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self.cram = CramCfg.instance() # pylint: disable-msg=E1102
         self.crmpull = CramPull.instance() # pylint: disable-msg=E1101
-        self.callhub = CallHub.instance() # pylint: disable-msg=E1101
+        self.club = CallHub.instance() # pylint: disable-msg=E1101
 
 
-    def start_process():
+    def start_process(self):
         """Check the time to start processing"""
         when = time.strptime(self.cram.cfg['runat'], '%H:%M')
         now = time.localtime()
@@ -27,7 +27,7 @@ class CramIo(object):
         return start
 
 
-    def stop_process():
+    def stop_process(self):
         """Look for process stop file"""
         return os.path.exists(self.cram.cfg['stop_file_path'])
 
@@ -35,16 +35,16 @@ class CramIo(object):
     def process_group(crm, group):
         """
         Pull the contact list for the group from CiviCRM,
-        then update corresponding CallHub phonebook.
+        then update corresponding club phonebook.
         """
         self.logger.info(' - { crm: "%s", ch: "%s"' % (group["crm"], group["ch"]))
         crm_contacts = self.crmpull.group(group['crm'])
 
         if self.stop_process():
-            self.logger.info('Stopping: CallHub phonebook not updated: "%s"' % group['ch'])
+            self.logger.info('Stopping: club phonebook not updated: "%s"' % group['ch'])
             return
 
-        self.callhub.phonebook_update(
+        self.club.phonebook_update(
             phonebook_id=group['ch'],
             crm_contacts=crm_contacts,
             crm_ch_id_map=self.crm_ch_id_map)
@@ -53,9 +53,9 @@ class CramIo(object):
     def process_groups():
         """Use the engine's configuration to control this thread's activity."""
         start = time.time()
-        self.crm_ch_id_map = self.callhub.contacts()
+        self.crm_ch_id_map = self.club.contacts()
         end = time.time()
-        self.logger.info("Retrieving all CallHub contacts took: %d seconds" % int(end-start))
+        self.logger.info("Retrieving all club contacts took: %d seconds" % int(end-start))
 
         self.logger.info('Groups:')
         for group in self.cram.cfg['groups']:
