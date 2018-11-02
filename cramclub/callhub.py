@@ -156,7 +156,7 @@ class CallHub(object):
         phonebook_add_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
         response = post(url=phonebook_create_contact,
                         headers=self.headers,
-                        data={'contact_ids': ch_contact_ids)
+                        data={'contact_ids': ch_contact_ids})
         self.logger.info(
             'Phonebook: "%s" Add existing contact: "%s"' %
             (phonebook_id, ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID]))
