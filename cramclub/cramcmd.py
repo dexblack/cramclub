@@ -18,8 +18,8 @@ def start():
     #logger.info(args)
     cramio = CramIo()
     # Clean up from previous 'stop' command
-    if cramio.start_process():
-        os.remove(cramio.cfg['stop_file_path'])
+    if cramio.stop_process():
+        os.remove(cramio.cram.cfg['stop_file_path'])
 
 
     # Here is where the work really begins
