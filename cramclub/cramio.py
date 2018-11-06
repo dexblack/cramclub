@@ -33,7 +33,7 @@ class CramIo(object):
         return os.path.exists(self.cram.cfg['stop_file_path'])
 
 
-    def process_group(crm, group):
+    def process_group(self, crm, group):
         """
         Pull the contact list for the group from CiviCRM,
         then update corresponding club phonebook.
@@ -51,7 +51,7 @@ class CramIo(object):
             crm_ch_id_map=self.crm_ch_id_map)
 
 
-    def process_groups():
+    def process_groups(self):
         """Use the engine's configuration to control this thread's activity."""
         start = time.time()
         self.crm_ch_id_map = self.club.contacts()
@@ -65,8 +65,8 @@ class CramIo(object):
             # Write CSV output of the generated crm ch id mapping.
             with open(self.cram.cfg['csv_file_path'], 'w', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, dialect='excel')
-                for id_map_item in self.crm_ch_id_map:
-                    csv_writer.writerow([id_map_item['ch'], id_map_item['crm']])
+                for ch,crm in self.crm_ch_id_map.items():
+                    csv_writer.writerow([ch, crm])
                 self.logger.info('Created CSV cache file: "%s"' % self.cram.cfg['csv_file_path'])
 
         if ('csv_cache' in self.cram.cfg and
