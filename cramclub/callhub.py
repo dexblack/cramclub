@@ -73,7 +73,9 @@ class CallHub(object):
         all_contacts = self.url + '/contacts'
 
         crm_ch_id_map = {}
-        gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=content['results'])
+        get_response = get(url=all_contacts, headers=self.headers)
+        response_content = json.loads(get_response.content)
+        gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
 
         for page in range(2, int(int(content['count']) / 10) + 2):
             get_response = get(url=all_contacts + '?page=%d' % page, headers=self.headers)
