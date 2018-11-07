@@ -70,16 +70,20 @@ class CallHub(object):
 
     def contacts(self):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
-        all_contacts = self.url + '/contacts'
 
         crm_ch_id_map = {}
-        get_response = get(url=all_contacts, headers=self.headers)
-        response_content = json.loads(get_response.content)
-        gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
+        page = 1
+        next = self.url + '/contacts?page=%d' % page
+        while next:
+            get_response = get(url=next, headers=self.headers)
+            if get_response.status_code != 200:
+                self.logger.critical('Failed to retrieve CallHub Contacts page %d' % page)
+                next = None
+                continue
 
-        for page in range(2, int(int(content['count']) / 10) + 2):
-            get_response = get(url=all_contacts + '?page=%d' % page, headers=self.headers)
             response_content = json.loads(get_response.content)
+            next = response_content['next']
+            page = page + 1
             gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
 
         return crm_ch_id_map
