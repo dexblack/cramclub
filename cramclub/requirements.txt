@@ -1,0 +1,13 @@
+certifi==2018.10.15
+chardet==3.0.4
+get==1.0.3
+idna==2.7
+pip==18.1
+post==1.0.2
+public==2.0.1
+PyYAML==3.13
+query-string==1.0.2
+requests==2.20.0
+setuptools==39.0.1
+singleton==0.1.0
+urllib3==1.24.1
