@@ -59,11 +59,11 @@ class CallHub(object):
     """
     def __init__(self, *args, **kwargs):
         cram = CramCfg.instance() # pylint: disable-msg=E1101
-        self.url = cram.cfg['callhub']['url']
-        self.civicrm_url = cram.cfg['civicrm']['url']
-        self.rocket_url = cram.cfg['rocket']['url']
+        self.url = cram.get('', 'callhub', 'url')
+        self.civicrm_url = cram.get('', 'civicrm', 'url')
+        self.rocket_url = cram.get('', 'rocket', 'url')
         self.headers = {
-            'Authorization': 'Token ' + cram.cfg['callhub']['api_key'],
+            'Authorization': 'Token ' + cram.get('', 'callhub', 'api_key'),
             }
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
 
