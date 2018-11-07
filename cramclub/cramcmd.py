@@ -17,14 +17,16 @@ def start():
     #logger.info('Starting')
     #logger.info(args)
     cramio = CramIo()
-    # Clean up from previous 'stop' command
     if cramio.stop_process():
+        # Clean up from previous 'stop' command
         os.remove(cramio.cram.cfg['stop_file_path'])
 
     # Here is where the work really begins
     while not cramio.stop_process():
         if cramio.start_process():
             cramio.process_groups()
+        if cramio.do_csv_only:
+            break
         # Wait a minute before checking again
         time.sleep(RETRY_TIME)
 

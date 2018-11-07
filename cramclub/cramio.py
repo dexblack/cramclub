@@ -18,6 +18,9 @@ class CramIo(object):
         self.cram = CramCfg.instance() # pylint: disable-msg=E1102
         self.crmpull = CramPull.instance() # pylint: disable-msg=E1101
         self.club = CallHub.instance() # pylint: disable-msg=E1101
+        self.do_csv_only = ('csv_cache' in self.cram.cfg and
+            'only' in self.cram.cfg['csv_cache'] and
+            self.cram.cfg['csv_cache']['only'])
 
 
     def start_process(self):
@@ -54,7 +57,10 @@ class CramIo(object):
 
 
     def process_groups(self):
-        """Use the engine's configuration to control this thread's activity."""
+        """
+        Interruptable group processing routine.
+        The 'cramclub.instance.stop' file is checked prior to each group.
+        """
         start = time.time()
         self.crm_ch_id_map = self.club.contacts()
         end = time.time()
@@ -71,10 +77,7 @@ class CramIo(object):
                     csv_writer.writerow([ch, crm])
                 self.logger.info('Created CSV cache file: "%s"' % self.cram.cfg['csv_file_path'])
 
-        if ('csv_cache' in self.cram.cfg and
-            'only' in self.cram.cfg['csv_cache'] and
-            self.cram.cfg['csv_cache']['only']
-            ):
+        if self.do_csv_only:
             # Stop processing here
             return
 
