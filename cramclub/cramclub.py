@@ -71,7 +71,7 @@ def main(argv):
     config = CramCfg.instance() # pylint: disable-msg=E1101
     config.update(args)
 
-    if "cmd" in args:
+    if 'cmd' in args:
         args.cmd()
 
 
