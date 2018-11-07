@@ -18,18 +18,17 @@ class CramIo(object):
         self.cram = CramCfg.instance() # pylint: disable-msg=E1102
         self.crmpull = CramPull.instance() # pylint: disable-msg=E1101
         self.club = CallHub.instance() # pylint: disable-msg=E1101
-        self.do_csv_only = ('csv_cache' in self.cram.cfg and
-            'only' in self.cram.cfg['csv_cache'] and
-            self.cram.cfg['csv_cache']['only'])
+        self.do_csv_only = self.cram.get(False, 'csv_cache', 'only')
+        self.use_csv_cache = self.cram.get(False, 'csv_cache', 'use')
+        self.csv_file_path = self.cram.cfg['csv_file_path']
 
 
     def start_process(self):
         """Check the time to start processing"""
         when = time.strptime(self.cram.cfg['runat'], '%H:%M')
         now = time.localtime()
-        start = (now.tm_hour == when.tm_hour and
-            now.tm_min == when.tm_min or (
-                'instance' in self.cram.cfg and self.cram.cfg['instance'] == 'test'))
+        start = (now.tm_hour == when.tm_hour and now.tm_min == when.tm_min or (
+            'instance' in self.cram.cfg and self.cram.cfg['instance'] == 'test'))
         return start
 
 
@@ -38,22 +37,41 @@ class CramIo(object):
         return os.path.exists(self.cram.cfg['stop_file_path'])
 
 
-    def process_group(self, crm, group):
+    def write_csv(self):
+        # Write CSV output of the generated crm ch id mapping.
+        with open(self.csv_file_path, 'w', newline='') as csvfile:
+            csv_writer = csv.writer(csvfile, dialect='excel')
+            for ch,crm in self.crm_ch_id_map.items():
+                csv_writer.writerow([ch, crm])
+            self.logger.info('Created CSV cache file: "%s"' % self.csv_file_path)
+
+
+    def read_csv(self):
+        self.logger.info('Using CSV cache file: "%s"' % self.csv_file_path)
+        self.crm_ch_id_map = {}
+        with open(self.csv_file_path, 'r', newline='') as csvfile:
+            csv_reader = csv.reader(csvfile, dialect='excel')
+            for row in csv_reader:
+                self.crm_ch_id_map[row[0]] = row[1]
+
+
+    def phonebook_update(self, group_link):
         """
         Pull the contact list for the group from CiviCRM,
         then update corresponding club phonebook.
         """
-        self.logger.info(' - { crm: "%s", ch: "%s"' % (group["crm"], group["ch"]))
-        crm_contacts = self.crmpull.group(group['crm'])
+        self.logger.info(' - { crm: "%s", ch: "%s"' % (group_link['crm'], group_link['ch']))
+        crm_contacts = self.crmpull.group(group_link['crm'])
 
         if self.stop_process():
-            self.logger.info('Stopping: club phonebook not updated: "%s"' % group['ch'])
+            self.logger.info('Stopping: club phonebook not updated: "%s"' % group_link['ch'])
             return
 
-        self.club.phonebook_update(
-            phonebook_id=group['ch'],
-            crm_contacts=crm_contacts,
-            crm_ch_id_map=self.crm_ch_id_map)
+        if crm_contacts:
+            self.club.phonebook_update(
+                phonebook_id=group_link['ch'],
+                crm_contacts=crm_contacts,
+                crm_ch_id_map=self.crm_ch_id_map)
 
 
     def process_groups(self):
@@ -61,29 +79,29 @@ class CramIo(object):
         Interruptable group processing routine.
         The 'cramclub.instance.stop' file is checked prior to each group.
         """
-        start = time.time()
-        self.crm_ch_id_map = self.club.contacts()
-        end = time.time()
-        self.logger.info("Retrieving all club contacts took: %d seconds" % int(end-start))
-        if ('csv_cache' in self.cram.cfg and
-            'csv_file_path' in self.cram.cfg and
-            'create' in self.cram.cfg['csv_cache'] and
-            self.cram.cfg['csv_cache']['create']
-            ):
-            # Write CSV output of the generated crm ch id mapping.
-            with open(self.cram.cfg['csv_file_path'], 'w', newline='') as csvfile:
-                csv_writer = csv.writer(csvfile, dialect='excel')
-                for ch,crm in self.crm_ch_id_map.items():
-                    csv_writer.writerow([ch, crm])
-                self.logger.info('Created CSV cache file: "%s"' % self.cram.cfg['csv_file_path'])
+        if self.cram.get(False, 'csv_cache', 'use'):
+            self.read_csv()
+        else:
+            start = time.time()
+            self.crm_ch_id_map = self.club.contacts()
+            end = time.time()
+            self.logger.info("Retrieving all club contacts took: %d seconds" % int(end-start))
 
-        if self.do_csv_only:
-            # Stop processing here
+            if self.cram.get(False, 'csv_cache', 'create'):
+                self.write_csv()
+
+            if self.do_csv_only:
+                # Stop processing here
+                self.logger.info('CRM Group to CallHub phonebook map CSV cache created.')
+                return
+
+        if not self.crm_ch_id_map:
+            self.logger.error('CRM Group to CallHub phonebook map is empty!')
             return
 
         self.logger.info('Groups:')
-        for group in self.cram.cfg['groups']:
+        for group_link in self.cram.cfg['groups']:
             if self.stop_process():
-                self.logger.info('Stopped before updating phonebook: "%s"' % group['ch'])
+                self.logger.info('Stopped before updating phonebook: "%s"' % group_link['ch'])
                 break
-            self.process_group(group=group)
+            self.phonebook_update(group_link)
