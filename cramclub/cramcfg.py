@@ -31,17 +31,18 @@ class CramCfg(object):
         if 'CRAMCLUB_CFG_DIR' in os.environ:
             self.cfg['dir'] = PurePath(os.environ['CRAMCLUB_CFG_DIR'])
 
-        if not self.cfg['dir']:
+        if not self.get('', 'dir'):
             if platform.system() == 'Linux':
                 self.cfg['dir'] = PurePath('/') / 'etc' / APP_NAME
             elif platform.system() == 'Windows':
                 self.cfg['dir'] = PurePath(os.environ['PROGRAMDATA']) / APP_NAME
 
-        if not self.cfg['dir']:
+        if not self.get(False, 'dir'):
             raise RuntimeError('CramCfg: Unsupported platform: ' + platform.system())
 
         self.logger.info('Configuration directory: ' + self.cfg['dir'].as_posix())
 
+        # Calculate various file paths.
         self.cfg['csv_file_path'] = (self.cfg['dir'] / (
             APP_NAME + dot_or_nothing(self.cfg['instance']) + '.csv')).as_posix()
 
@@ -130,3 +131,13 @@ class CramCfg(object):
         self.logger.info('Instance configuration: ' +
                          ('"' + inst + '"' if inst else 'null'))
         assert from_args.instance == self.cfg['instance']
+
+    def get(self, default, *args):
+        totalargs = len(args)
+        val = self.cfg
+        for i,arg in enumerate(args):
+            if i+1 == totalargs:
+                val = val.get(arg, default)
+            else:
+                val = val.get(arg, {})
+        return val
