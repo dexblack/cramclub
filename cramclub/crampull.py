@@ -21,11 +21,11 @@ class CramPull(object):
 
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self._api = CiviCRM(
-            url = cram.cfg['civicrm']['url'],
-            site_key = cram.cfg['civicrm']['site_key'],
-            api_key = cram.cfg['civicrm']['api_key'],
+            url = cram.get('', 'civicrm', 'url'),
+            site_key = cram.get('', 'civicrm', 'site_key'),
+            api_key = cram.get('', 'civicrm', 'api_key'),
             use_ssl = True,
-            timeout = cram.cfg['timeout'])
+            timeout = cram.get(5, 'timeout')
 
 
     def contact(self, id):
