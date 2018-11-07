@@ -24,7 +24,7 @@ class CramIo(object):
         """Check the time to start processing"""
         when = time.strptime(self.cram.cfg['runat'], '%H:%M')
         now = time.localtime()
-        start = now.tm_hour == when.tm_hour and (
+        start = (now.tm_hour == when.tm_hour and
             now.tm_min == when.tm_min or (
                 'instance' in self.cram.cfg and self.cram.cfg['instance'] == 'test'))
         return start
