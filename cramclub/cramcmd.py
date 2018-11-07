@@ -25,8 +25,8 @@ def start():
     while not cramio.stop_process():
         if cramio.start_process():
             cramio.process_groups()
-        if cramio.do_csv_only:
-            break
+            if cramio.do_csv_only:
+                break
         # Wait a minute before checking again
         time.sleep(RETRY_TIME)
 
