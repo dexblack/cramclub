@@ -7,6 +7,15 @@ from cramcfg import CramCfg
 from cramlog import CramLog
 from cramconst import RETRY_TIME
 from cramio import CramIo
+import cramtest
+
+
+
+def test():
+    """
+    Various tests to verify Web API behaviors.
+    """
+    cramtest.test_add_contact_to_callhub()
 
 
 def start():

@@ -29,9 +29,19 @@ class CramPull(object):
 
 
     def contact(self, id):
-        contact = self._api.get('Contact', id=id);
-        self.logger.debug('Contact: {:s}'.format(str(contact)))
+        response = self._api.get('Contact', id=id);
+        contact = {}
+        if response:
+            contact = response[0]
+            self.logger.debug('Contact: {:s}'.format(str(contact)))
+            custom = self._api.get('CustomValue', entity_id=id)
+            self.logger.debug('Custom data: {:s}'.format(str(custom)))
+            fields = {}
+            if custom['is_error'] != 0 and custom['count'] == 1:
+                fields = custom['values'][0]
+            contact['custom_fields'] = fields
         return contact
+
 
     def group(self, group_id):
         contacts = []

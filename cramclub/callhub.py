@@ -134,11 +134,11 @@ class CallHub(object):
             'address': crm_contact['street_address'],
             'city': crm_contact['city'],
             'state': crm_contact['state_province'],
-            'company_name': crm_contact[''],
+            'company_name': '',
             'company_website': '%s/%s' % (self.rocket_url, crm_contact['contact_id']),
             CUSTOM_FIELDS: {
-                CUSTOM_FIELD_FEDERAL: crm_contact[''],
-                CUSTOM_FIELD_STATE: crm_contact[''],
+                CUSTOM_FIELD_FEDERAL: crm_contact['custom_fields'],
+                CUSTOM_FIELD_STATE: crm_contact['custom_fields'],
                 CUSTOM_FIELD_CONTACTID: crm_contact['contact_id']}
             }
 
@@ -155,7 +155,7 @@ class CallHub(object):
             self.logger.info(response.content)
         else:
             self.logger.debug(response)
-        return response
+        return response.content
 
 
     def phonebook_add_existing(self, phonebook_id, ch_contact_ids):
@@ -170,7 +170,7 @@ class CallHub(object):
             self.logger.info(response.content)
         else:
             self.logger.debug(response)
-        return response
+        return response.content
 
 
 
@@ -197,12 +197,12 @@ class CallHub(object):
         
         # Create missing contacts in the phonebook
         for crm_contact in missing:
-            self.phonebook_create_new_contact(
+            result = self.phonebook_create_new_contact(
                 phonebook_id,
                 self.make_callhub_contact_from(crm_contact))
 
         # Add the remaining existing contacts to the phonebook
-        self.phonebook_add_existing(
+        result = self.phonebook_add_existing(
                 phonebook_id,
                 [crm_ch_id_map[crm_contact['contact_id']]
                  for crm_contact in remainder])

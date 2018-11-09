@@ -13,7 +13,7 @@
     <RootNamespace>cramclub</RootNamespace>
     <InterpreterId>MSBuild|env|$(MSBuildProjectFullPath)</InterpreterId>
     <LaunchProvider>Standard Python launcher</LaunchProvider>
-    <CommandLineArguments>start --instance test</CommandLineArguments>
+    <CommandLineArguments>test</CommandLineArguments>
     <EnableNativeCodeDebugging>True</EnableNativeCodeDebugging>
     <Environment>
     </Environment>
@@ -30,6 +30,7 @@
     <Compile Include="callhub.py">
       <SubType>Code</SubType>
     </Compile>
+    <Compile Include="civicrm.py" />
     <Compile Include="cramclub.py" />
     <Compile Include="cramcmd.py">
       <SubType>Code</SubType>
@@ -47,6 +48,9 @@
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="cramcfg.py">
+      <SubType>Code</SubType>
+    </Compile>
+    <Compile Include="cramtest.py">
       <SubType>Code</SubType>
     </Compile>
     <Compile Include="__init__.py" />

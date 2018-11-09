@@ -57,6 +57,13 @@ def get_args(argv):
                              required=True)
     parser_restart.set_defaults(cmd=cramcmd.restart)
 
+    parser_test = subparsers.add_parser('test',
+                                        description='Halt a running updater')
+    parser_test.add_argument('--instance', '-i',
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             default='test')
+    parser_test.set_defaults(cmd=cramcmd.test)
+
     args = parser.parse_args(argv)
     return args
 
