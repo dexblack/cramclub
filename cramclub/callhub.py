@@ -29,7 +29,8 @@ def gather_callhub_ids(id_map, callhub_contacts):
             callhub_contact[CUSTOM_FIELDS] and
             CUSTOM_FIELD_CONTACTID in callhub_contact[CUSTOM_FIELDS]):
             # Gather the contact id
-            custom_fields = json.loads(callhub_contact[CUSTOM_FIELDS].replace("'", '"').replace('u"','"'))
+            custom_fields = json.loads(
+                callhub_contact[CUSTOM_FIELDS].replace("'", '"').replace('u"','"'))
             crm_id = custom_fields[CUSTOM_FIELD_CONTACTID]
             if not crm_id:
                 continue
@@ -85,10 +86,10 @@ class CallHub(object):
         #    'New contact: "%s"' % ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID])
         content = {}
         if response.ok:
-            content = json.loads(response.content)
+            content = response.json()
             self.logger.info('Created Contact: ' + str(content))
         elif response.status_code == 400:
-            content = json.loads(response.content)
+            content = response.json()
             self.logger.warn('Create Contact bad request: HTTP Error %d' % response.status_code)
             self.logger.warn('Create Contact bad request: %s' % content['detail'])
         else:
@@ -96,7 +97,7 @@ class CallHub(object):
         return content
 
     def update_contact(self, id, ch_contact):
-        update_contact = self.url + '/contacts/%s' % id
+        update_contact = self.url + '/contacts/%s/' % id
         response = put(url=update_contact,
                        data=ch_contact,
                        headers=self.headers)
@@ -104,10 +105,10 @@ class CallHub(object):
         #    'New contact: "%s"' % ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID])
         content = {}
         if response.ok:
-            self.logger.info('Updated Contact: ' + response.content)
-            content = json.loads(response.content)
+            content = response.json()
+            self.logger.info('Updated Contact: %s' % str(content))
         else:
-            self.logger.debug('Update Contact failed: ' + str(response))
+            self.logger.debug('Update Contact failed: %s. %s' % (response.reason, response.text))
         return content
 
     def contacts(self):
@@ -123,7 +124,7 @@ class CallHub(object):
                 next = None
                 continue
 
-            response_content = json.loads(get_response.content)
+            response_content = get_response.json()
             next = response_content['next']
             page = page + 1
             gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
@@ -176,13 +177,16 @@ class CallHub(object):
 
     def make_callhub_contact_from(self, crm_contact):
         """Extract and transform"""
-        def fmt(k, v):
-            return '"%s": "%s"' % (k, v)
+        def fmt(key, value):
+            return '"%s": "%s"' % (key, value)
 
         fields = [
             fmt(CUSTOM_FIELD_FEDERAL, (
-                crm_contact['custom'][self.crm_custom['federal']] if self.crm_custom else '')),
-            fmt(CUSTOM_FIELD_STATE, crm_contact['state_province'] + ' - ' + '?'),
+                crm_contact['custom'][self.crm_custom['federal']]
+                if (self.crm_custom and
+                    self.crm_custom['federal'] in crm_contact['custom'])
+                else '')),
+            #fmt(CUSTOM_FIELD_STATE, crm_contact['state_province'] + ' - ' + '?'),
             fmt(CUSTOM_FIELD_CONTACTID, crm_contact['contact_id'])
         ]
         custom_fields = '{%s}' % ','.join(fields)
@@ -220,12 +224,12 @@ class CallHub(object):
 
     def phonebook_add_existing(self, phonebook_id, ch_contact_ids):
         phonebook_add_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
-        response = post(url=phonebook_create_contact,
+        response = post(url=phonebook_add_contacts,
                         headers=self.headers,
                         data={'contact_ids': ch_contact_ids})
-        self.logger.info(
-            'Phonebook: "%s" Add existing contact: "%s"' %
-            (phonebook_id, ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID]))
+        self.logger.debug(
+            'Phonebook: "%s" Add existing contacts: "%s"' %
+            (phonebook_id, str(ch_contact_ids)))
         if response.ok:
             self.logger.info(response.content)
         else:

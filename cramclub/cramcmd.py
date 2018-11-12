@@ -53,6 +53,7 @@ def stop():
 
 
 def restart():
+    """Stops other running instance and then starts running itself."""
     stop()
     # Wait long enough for the currently running instance to halt
     time.sleep(RETRY_TIME)
