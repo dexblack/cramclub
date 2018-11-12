@@ -33,13 +33,12 @@ class CramPull(object):
         contact = {}
         if response:
             contact = response[0]
-            self.logger.debug('Contact: {:s}'.format(str(contact)))
-            custom = self._api.get('CustomValue', entity_id=id)
-            self.logger.debug('Custom data: {:s}'.format(str(custom)))
-            fields = {}
-            if custom['is_error'] != 0 and custom['count'] == 1:
-                fields = custom['values'][0]
-            contact['custom_fields'] = fields
+            #self.logger.debug('Contact: {:s}'.format(str(contact)))
+            fields = self._api.get('CustomValue', entity_id=id)
+            #self.logger.debug('Custom data: {:s}'.format(str(fields)))
+            contact['custom'] = {}
+            for field in fields:
+                contact['custom'][field['id']] = field['latest']
         return contact
 
 
