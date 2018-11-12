@@ -13,7 +13,7 @@ def test_add_contact_to_callhub():
     crampull = CramPull.instance()
     club = CallHub.instance()
 
-    crm_id = '287831'
+    crm_id = '213824' # TR
     crm_contact = crampull.contact(crm_id)
     if not crm_contact:
         logger.error('Failed to retrieve CRM contact: ' + crm_id)
@@ -21,6 +21,18 @@ def test_add_contact_to_callhub():
 
     ch_contact = club.make_callhub_contact_from(crm_contact)
 
+    #callhub_contact_fields = club.get_contact_fields()
 
-    result1 = club.phonebook_create_new_contact(phonebook_id, ch_contact)
-    result2 = club.phonebook_create_new_contact(phonebook_id, ch_contact)
+    result1 = club.create_contact(ch_contact)
+
+    ch_id = '24654185' # TR
+    if 'exists' in result1 and result1['exists']:
+        logger.debug('Existing contact returned')
+
+    ch_contact2 = {
+        'contact': result1['contact']['contact'],
+        'last_name': 'Raue_'
+        #'job_title': crm_id + '?',
+        #'custom_fields': "{u'2170': u'Grayndler', u'2171': u'NSW - Summer Hill', u'2184': u'213824'}"
+    }
+    result2 = club.update_contact(result1['contact']['id'], ch_contact2)
