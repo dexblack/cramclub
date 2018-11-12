@@ -2,7 +2,7 @@
 Wrapper for CallHub operations.
 """
 import json
-from requests import get, post, delete
+from requests import get, post, put, delete
 from singleton.singleton import Singleton
 
 from cramlog import CramLog
@@ -62,11 +62,53 @@ class CallHub(object):
         self.url = cram.cfg['callhub']['url']
         self.civicrm_url = cram.cfg['civicrm']['url']
         self.rocket_url = cram.cfg['rocket']['url']
+        self.crm_custom = (cram.cfg['civicrm']['custom']
+                           if 'custom' in cram.cfg['civicrm'] else {})
         self.headers = {
             'Authorization': 'Token ' + cram.cfg['callhub']['api_key'],
             }
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
 
+
+    def get_contact_fields(self):
+        contact_fields = '%s/contacts/fields/' % self.url
+        response = get(url=contact_fields, headers=self.headers)
+        return response.content
+
+
+    def create_contact(self, ch_contact):
+        create_contact = self.url + '/contacts/'
+        response = post(url=create_contact,
+                        headers=self.headers,
+                        data=ch_contact)
+        #self.logger.info(
+        #    'New contact: "%s"' % ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID])
+        content = {}
+        if response.ok:
+            content = json.loads(response.content)
+            self.logger.info('Created Contact: ' + str(content))
+        elif response.status_code == 400:
+            content = json.loads(response.content)
+            self.logger.warn('Create Contact bad request: HTTP Error %d' % response.status_code)
+            self.logger.warn('Create Contact bad request: %s' % content['detail'])
+        else:
+            self.logger.error('Create Contact failed: HTTP Error %d' % response.status_code)
+        return content
+
+    def update_contact(self, id, ch_contact):
+        update_contact = self.url + '/contacts/%s' % id
+        response = put(url=update_contact,
+                       data=ch_contact,
+                       headers=self.headers)
+        #self.logger.info(
+        #    'New contact: "%s"' % ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID])
+        content = {}
+        if response.ok:
+            self.logger.info('Updated Contact: ' + response.content)
+            content = json.loads(response.content)
+        else:
+            self.logger.debug('Update Contact failed: ' + str(response))
+        return content
 
     def contacts(self):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
@@ -87,6 +129,16 @@ class CallHub(object):
             gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
 
         return crm_ch_id_map
+
+
+    def delete_contact(self, id):
+        """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
+
+        next = self.url + '/contacts?' + id
+        del_response = delete(url=next, headers=self.headers)
+        if del_response.status_code != 200:
+            self.logger.critical('Failed to delete CallHub Contact ' + id)
+        return
 
 
     def phonebook_get_contacts(self, phonebook_id):
@@ -124,6 +176,17 @@ class CallHub(object):
 
     def make_callhub_contact_from(self, crm_contact):
         """Extract and transform"""
+        def fmt(k, v):
+            return '"%s": "%s"' % (k, v)
+
+        fields = [
+            fmt(CUSTOM_FIELD_FEDERAL, (
+                crm_contact['custom'][self.crm_custom['federal']] if self.crm_custom else '')),
+            fmt(CUSTOM_FIELD_STATE, crm_contact['state_province'] + ' - ' + '?'),
+            fmt(CUSTOM_FIELD_CONTACTID, crm_contact['contact_id'])
+        ]
+        custom_fields = '{%s}' % ','.join(fields)
+
         return {
             'contact': crm_contact['phone'],
             'mobile': crm_contact['phone'] if crm_contact['phone'][0:2] == '04' else '',
@@ -136,10 +199,7 @@ class CallHub(object):
             'state': crm_contact['state_province'],
             'company_name': '',
             'company_website': '%s/%s' % (self.rocket_url, crm_contact['contact_id']),
-            CUSTOM_FIELDS: {
-                CUSTOM_FIELD_FEDERAL: crm_contact['custom_fields'],
-                CUSTOM_FIELD_STATE: crm_contact['custom_fields'],
-                CUSTOM_FIELD_CONTACTID: crm_contact['contact_id']}
+            CUSTOM_FIELDS: custom_fields
             }
 
 
