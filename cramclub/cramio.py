@@ -27,6 +27,7 @@ class CramIo(object):
         self.club = CallHub.instance()  # pylint: disable-msg=E1101
         self.crm_ch_id_map = {}
 
+
     def start_process(self):
         """Check the time to start processing"""
         when = time.strptime(self.cram.cfg['runat'], '%H:%M')
@@ -37,9 +38,11 @@ class CramIo(object):
                      self.cram.cfg['instance'] == 'test'))
         return start
 
+
     def stop_process(self):
         """Look for process stop file"""
         return os.path.exists(self.cram.cfg['stop_file_path'])
+
 
     def process_group(self, crm_group_id, phonebook_id):
         """
@@ -53,6 +56,7 @@ class CramIo(object):
             phonebook_id=phonebook_id,
             crm_contacts=crm_contacts,
             crm_ch_id_map=self.crm_ch_id_map)
+
 
     def process_groups(self):
         """Use the engine's configuration to control this thread's activity."""
