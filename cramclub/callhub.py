@@ -164,7 +164,7 @@ class CallHub(object):
 
     def delete_contact(self, ch_id):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
-        next_page = self.url + '/contacts?' + ch_id
+        next_page = self.url + ('/contacts/%s/' % ch_id)
         del_response = delete(url=next_page, headers=self.headers)
         if del_response.status_code != 200:
             self.logger.critical('Failed to delete CallHub Contact ' + ch_id)
@@ -173,7 +173,7 @@ class CallHub(object):
     def phonebook_get_contacts(self, phonebook_id):
         """Retrieve all contacts in a phonebook"""
         contacts = []
-        next_url = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
+        next_url = '%s/phonebooks/%s/contacts/' % (self.url, phonebook_id)
         while next_url:
             response = get(url=next_url, headers=self.headers)
             if response.ok:
@@ -187,7 +187,7 @@ class CallHub(object):
 
     def phonebook_clear(self, phonebook_id, contact_ids):
         """Retrieve all contacts, then build a delete all request"""
-        phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
+        phonebook_contacts = '%s/phonebooks/%s/contacts/' % (self.url, phonebook_id)
         if contact_ids:
             headers = {'Content-Type': 'application/json'}
             headers.update(self.headers)
@@ -253,13 +253,14 @@ class CallHub(object):
 
     def phonebook_add_existing(self, phonebook_id, ch_contact_ids):
         """Add a list of contacts to a phonebook."""
-        phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
+        phonebook_contacts = '%s/phonebooks/%s/contacts/' % (self.url, phonebook_id)
         headers = {'Content-Type': 'application/json'}
         headers.update(self.headers)
         response = post(
             url=phonebook_contacts,
             headers=headers,
-            data=json.dumps({'contact_ids': ch_contact_ids}))
+            data=json.dumps({'contact_ids': ch_contact_ids}),
+            allow_redirects=False)
         content = {}
         if response.ok:
             self.logger.info(
