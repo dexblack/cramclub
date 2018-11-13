@@ -126,9 +126,10 @@ class CallHub(object):
     def update_contact(self, ch_id, ch_contact):
         """Use 'ch_contact' fields to update CallHub contact 'ch_id'."""
         update_contact = self.url + '/contacts/%s/' % ch_id
-        response = put(url=update_contact,
-                       data=ch_contact,
-                       headers=self.headers)
+        response = put(
+            url=update_contact,
+            data=ch_contact,
+            headers=self.headers)
         #self.logger.info(
         #    'New contact: "%s"' % ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID])
         content = {}
@@ -190,9 +191,10 @@ class CallHub(object):
         if contact_ids:
             headers = {'Content-Type': 'application/json'}
             headers.update(self.headers)
-            delete_result = delete(url=phonebook_contacts,
-                                   headers=headers,
-                                   data=json.dumps({'contact_ids': contact_ids}))
+            delete_result = delete(
+                url=phonebook_contacts,
+                headers=headers,
+                data=json.dumps({'contact_ids': contact_ids}))
             if delete_result.ok:
                 return delete_result.json()
         # Consistent return result makes calling code cleaner.
@@ -254,9 +256,10 @@ class CallHub(object):
         phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
         headers = {'Content-Type': 'application/json'}
         headers.update(self.headers)
-        response = post(url=phonebook_contacts,
-                        headers=headers,
-                        data=json.dumps({'contact_ids': ch_contact_ids}))
+        response = post(
+            url=phonebook_contacts,
+            headers=headers,
+            data=json.dumps({'contact_ids': ch_contact_ids}))
         content = {}
         if response.ok:
             self.logger.info(
