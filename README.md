@@ -15,7 +15,7 @@ Configuration files:
 ### Usage
 	python cramclub.py --help
 
-	usage: cramclub.py [-h] [--version] {start,stop,restart} ...
+	usage: cramclub.py [-h] [--version] [--loglevel {CRITICAL,ERROR,WARNING,INFO,DEBUG,NOTSET}] {start,stop,restart} ...
 
 CiviCRM smart groups to CallHub phonebooks updater.
 
@@ -62,6 +62,8 @@ Optional arguments:
 	--runat RUNAT, -r RUNAT
 		Time of day to run the job. [env] CRAMCLUB_RUNAT
 
+    e.g. python cramclub.py -l WARNING start -i prod --runat 03:00 --timeout 30
+
 #### Stopping
 Halt a running updater
 
@@ -70,6 +72,7 @@ Halt a running updater
 	usage: cramclub.py stop -h | --help
 	usage: cramclub.py stop --instance INSTANCE
 
+    e.g. python cramclub.py -l NOTSET stop -i prod
 
 #### Restarting
 Restarting a running updater
