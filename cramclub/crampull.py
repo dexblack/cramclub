@@ -16,8 +16,12 @@ class CramPull(object):
     """
     _api = None
 
-    def __init__(self, *args, **kwargs):
-        cram = CramCfg.instance()
+    def __init__(self):
+        """
+        Set up logger and keys from config.
+        Load CiviCRM instance.
+        """
+        cram = CramCfg.instance() # pylint: disable-msg=E1101
 
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self._api = CiviCRM(
@@ -28,13 +32,14 @@ class CramPull(object):
             timeout = cram.cfg['timeout'])
 
 
-    def contact(self, id):
-        response = self._api.get('Contact', id=id);
+    def contact(self, crm_id):
+        """ Retrieve a single contact. """
+        response = self._api.get('Contact', id=crm_id)
         contact = {}
         if response:
             contact = response[0]
             #self.logger.debug('Contact: {:s}'.format(str(contact)))
-            fields = self._api.get('CustomValue', entity_id=id)
+            fields = self._api.get('CustomValue', entity_id=crm_id)
             #self.logger.debug('Custom data: {:s}'.format(str(fields)))
             contact['custom'] = {}
             for field in fields:
@@ -43,16 +48,17 @@ class CramPull(object):
 
 
     def group(self, group_id):
+        """ Retrieve all contacts in a group. """
         contacts = []
         try:
             contacts = self._api.get('Contact',
                                      group=[group_id],
                                      limit=5000,
-                                     offset=0);
+                                     offset=0)
 
             self.logger.info('Contacts: {:d}'.format(len(contacts)))
 
-        except ReadTimeout as ce:
-            self.logger.error(ce)
+        except ReadTimeout as err:
+            self.logger.error(err)
 
         return contacts
