@@ -113,6 +113,7 @@ class CallHub(object):
             self.logger.error('Create Contact failed: HTTP Error %d' % response.status_code)
         return content
 
+
     def update_contact(self, ch_id, ch_contact):
         """Use 'ch_contact' fields to update CallHub contact 'ch_id'."""
         update_contact = self.url + '/contacts/%s/' % ch_id
@@ -128,6 +129,7 @@ class CallHub(object):
         else:
             self.logger.debug('Update Contact failed: %s. %s' % (response.reason, response.text))
         return content
+
 
     def contacts(self):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
