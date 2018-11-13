@@ -20,21 +20,24 @@
             "name": "Python: Current File",
             "type": "python",
             "request": "launch",
-            "program": "${file}"
+            "program": "${file}",
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Python: Terminal (integrated)",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "integratedTerminal"
+            "console": "integratedTerminal",
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Python: Terminal (external)",
             "type": "python",
             "request": "launch",
             "program": "${file}",
-            "console": "externalTerminal"
+            "console": "externalTerminal",
+            "cwd": "${workspaceFolder}"
         },
         {
             "name": "Python: Django",
