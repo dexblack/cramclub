@@ -33,7 +33,9 @@ class CramCfg(object):
 
         if not self.cfg['dir']:
             if platform.system() == 'Linux':
-                self.cfg['dir'] = PurePath('/') / 'etc' / APP_NAME
+                xdg_cfg_home = os.environ['XDG_CONFIG_HOME']
+                xdg_home = PurePath(xdg_cfg_home if xdg_cfg_home else '/etc')
+                self.cfg['dir'] = xdg_home / APP_NAME
             elif platform.system() == 'Windows':
                 self.cfg['dir'] = PurePath(os.environ['PROGRAMDATA']) / APP_NAME
 
