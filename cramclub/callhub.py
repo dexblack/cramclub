@@ -7,15 +7,15 @@ from singleton.singleton import Singleton
 
 from cramlog import CramLog
 from cramcfg import CramCfg
-from cramconst import CUSTOM_FIELDS, CUSTOM_FIELD_FEDERAL, \
-                      CUSTOM_FIELD_STATE, CUSTOM_FIELD_CONTACTID
+from cramconst import CUSTOM_FIELDS, CUSTOM_FIELD_CONTACTID
+# unused CUSTOM_FIELD_FEDERAL, CUSTOM_FIELD_STATE
 
 
 def missing_callhub_contacts(ch_contacts, crm_contacts, crm_ch_id_map):
     """Gather callhub entries not found in CiviCRM id map"""
     ch_ids = [crm_ch_id_map[crm_contact['contact_id']]
               for crm_contact in crm_contacts]
-    
+
     missing = [ch_contact['id'] for ch_contact in ch_contacts
                if ch_contact['id'] not in ch_ids]
 
@@ -26,11 +26,11 @@ def gather_callhub_ids(id_map, callhub_contacts):
     """Examine CallHub contact details for CiviCRM id"""
     for callhub_contact in callhub_contacts:
         if (CUSTOM_FIELDS in callhub_contact and
-            callhub_contact[CUSTOM_FIELDS] and
-            CUSTOM_FIELD_CONTACTID in callhub_contact[CUSTOM_FIELDS]):
+                callhub_contact[CUSTOM_FIELDS] and
+                CUSTOM_FIELD_CONTACTID in callhub_contact[CUSTOM_FIELDS]):
             # Gather the contact id
             custom_fields = json.loads(
-                callhub_contact[CUSTOM_FIELDS].replace("'", '"').replace('u"','"'))
+                callhub_contact[CUSTOM_FIELDS].replace("'", '"').replace('u"', '"'))
             crm_id = custom_fields[CUSTOM_FIELD_CONTACTID]
             if not crm_id:
                 continue
@@ -58,7 +58,10 @@ class CallHub(object):
     CallHub API wrapper.
     Implements limited required functionality.
     """
-    def __init__(self, *args, **kwargs):
+    def __init__(self):
+        """
+        Set up configured URLs, API keys and field identifiers.
+        """
         cram = CramCfg.instance() # pylint: disable-msg=E1101
         self.url = cram.cfg['callhub']['url']
         self.civicrm_url = cram.cfg['civicrm']['url']
@@ -72,12 +75,26 @@ class CallHub(object):
 
 
     def get_contact_fields(self):
+        """
+        Return field id and names.
+        Essentially useless unless you're building a CSV import mapping,
+        except it does not list custom field identifiers; for that you must
+        go to the appropriate Web UI Settings page.
+        NB: The names DO NOT match the actual fields used in the requests!
+        """
         contact_fields = '%s/contacts/fields/' % self.url
         response = get(url=contact_fields, headers=self.headers)
         return response.content
 
 
     def create_contact(self, ch_contact):
+        """
+        Before adding this data the 'contact' number field is standardised
+        and a lookup performed. If a matching record is found that is returned.
+        NB: The provided details are NOT updated into the existing record!
+        However, it MAY update the custom_fields; This needs further confirmation,
+        and the behaviour may also change if CallHub make their API work correctly.
+        """
         create_contact = self.url + '/contacts/'
         response = post(url=create_contact,
                         headers=self.headers,
@@ -96,8 +113,9 @@ class CallHub(object):
             self.logger.error('Create Contact failed: HTTP Error %d' % response.status_code)
         return content
 
-    def update_contact(self, id, ch_contact):
-        update_contact = self.url + '/contacts/%s/' % id
+    def update_contact(self, ch_id, ch_contact):
+        """Use 'ch_contact' fields to update CallHub contact 'ch_id'."""
+        update_contact = self.url + '/contacts/%s/' % ch_id
         response = put(url=update_contact,
                        data=ch_contact,
                        headers=self.headers)
@@ -116,30 +134,28 @@ class CallHub(object):
 
         crm_ch_id_map = {}
         page = 1
-        next = self.url + '/contacts?page=%d' % page
-        while next:
-            get_response = get(url=next, headers=self.headers)
+        next_page = self.url + '/contacts?page=%d' % page
+        while next_page:
+            get_response = get(url=next_page, headers=self.headers)
             if get_response.status_code != 200:
                 self.logger.critical('Failed to retrieve CallHub Contacts page %d' % page)
-                next = None
+                next_page = None
                 continue
 
             response_content = get_response.json()
-            next = response_content['next']
+            next_page = response_content['next']
             page = page + 1
             gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
 
         return crm_ch_id_map
 
 
-    def delete_contact(self, id):
+    def delete_contact(self, ch_id):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
-
-        next = self.url + '/contacts?' + id
-        del_response = delete(url=next, headers=self.headers)
+        next_page = self.url + '/contacts?' + ch_id
+        del_response = delete(url=next_page, headers=self.headers)
         if del_response.status_code != 200:
-            self.logger.critical('Failed to delete CallHub Contact ' + id)
-        return
+            self.logger.critical('Failed to delete CallHub Contact ' + ch_id)
 
 
     def phonebook_get_contacts(self, phonebook_id):
@@ -158,7 +174,7 @@ class CallHub(object):
                                    headers=self.headers,
                                    data=data)
             return delete_result
-
+        # Consistent return result makes calling code cleaner.
         return {
             'url': self.url,
             'id': phonebook_id,
@@ -176,17 +192,21 @@ class CallHub(object):
 
 
     def make_callhub_contact_from(self, crm_contact):
-        """Extract and transform"""
+        """
+        Extract CiviCRM contact data and transform into a CallHub contact.
+        NB: CiviCRM UI calculates the State and Federal electorates at runtime.
+        That data is not  available from the CiviCRM API to update CallHub.
+        """
         def fmt(key, value):
             return '"%s": "%s"' % (key, value)
 
         fields = [
-            fmt(CUSTOM_FIELD_FEDERAL, (
-                crm_contact['custom'][self.crm_custom['federal']]
-                if (self.crm_custom and
-                    self.crm_custom['federal'] in crm_contact['custom'])
-                else '')),
-            #fmt(CUSTOM_FIELD_STATE, crm_contact['state_province'] + ' - ' + '?'),
+            # fmt(CUSTOM_FIELD_FEDERAL, (
+            #     crm_contact['custom'][self.crm_custom['federal']]
+            #     if (self.crm_custom and
+            #         self.crm_custom['federal'] in crm_contact['custom'])
+            #     else '')),
+            # fmt(CUSTOM_FIELD_STATE, crm_contact['state_province'] + ' - ' + '?'),
             fmt(CUSTOM_FIELD_CONTACTID, crm_contact['contact_id'])
         ]
         custom_fields = '{%s}' % ','.join(fields)
@@ -207,7 +227,12 @@ class CallHub(object):
             }
 
 
-    def phonebook_create_new_contact(self, phonebook_id, ch_contact):
+    def phonebook_create_contact(self, phonebook_id, ch_contact):
+        """
+        Add an existing contact (if existing one matches normalise ch_contact['contact']),
+        otherwise create a new contact and add its id to the phonebook.
+        NB: See also 'create_contact'.
+        """
         phonebook_create_contact = '%s/phonebooks/%s/create_contact' % (self.url, phonebook_id)
         response = post(url=phonebook_create_contact,
                         headers=self.headers,
@@ -215,14 +240,17 @@ class CallHub(object):
         self.logger.info(
             'Phonebook: "%s" New contact: "%s"' %
             (phonebook_id, ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID]))
+        content = {}
         if response.ok:
-            self.logger.info(response.content)
+            content = response.json()
+            self.logger.info(str(content))
         else:
             self.logger.debug(response)
-        return response.content
+        return content
 
 
     def phonebook_add_existing(self, phonebook_id, ch_contact_ids):
+        """Add a list of contacts to a phonebook."""
         phonebook_add_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
         response = post(url=phonebook_add_contacts,
                         headers=self.headers,
@@ -237,10 +265,8 @@ class CallHub(object):
         return response.content
 
 
-
     def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
         """Create all contacts and add them to phonebook"""
-
         # Remove contacts not in the crm_contacts list
         missing = missing_callhub_contacts(
             ch_contacts=self.phonebook_get_contacts(phonebook_id),
@@ -251,22 +277,29 @@ class CallHub(object):
             phonebook_id=phonebook_id,
             contact_ids=missing)
 
+        # Returned 'count' is how many remain in the phonebook. AFAICT.
         assert ('count' in clear_result and
-                clear_result['count'] == len(ch_contacts) - len(remove_ch_contacts))
-
+                clear_result['count'] == len(crm_contacts) - len(missing))
 
         # Identify new CRM contacts
         ## Note: Without the dict map this would be O(N*N)!
         missing, remainder = missing_crm_contacts(crm_contacts, crm_ch_id_map)
-        
+
         # Create missing contacts in the phonebook
         for crm_contact in missing:
-            result = self.phonebook_create_new_contact(
+            result = self.phonebook_create_contact(
                 phonebook_id,
                 self.make_callhub_contact_from(crm_contact))
+            if not result:
+                self.logger.warn('CallHub.phonebook_update():' + \
+                'Failed to add to phonebook %s: %s, %s %s' % (
+                    phonebook_id,
+                    crm_contact['contact_id'],
+                    crm_contact['first_name'],
+                    crm_contact['last_name']))
 
         # Add the remaining existing contacts to the phonebook
         result = self.phonebook_add_existing(
-                phonebook_id,
-                [crm_ch_id_map[crm_contact['contact_id']]
-                 for crm_contact in remainder])
+            phonebook_id,
+            [crm_ch_id_map[crm_contact['contact_id']]
+             for crm_contact in remainder])

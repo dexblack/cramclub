@@ -7,5 +7,5 @@ __all__ = [
     'CivicrmError',
 ]
 
-from pythoncivicrm import CiviCRM
-from pythoncivicrm import CivicrmError
+from civicrm import CiviCRM
+from civicrm import CivicrmError
