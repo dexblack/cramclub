@@ -52,8 +52,8 @@ def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     # Another O(N) operation dodged with dict lookup.
     missing, remainder = ([], []) # This is the return value
     for crm_contact in crm_contacts:
-        if crm_contact['id'] in crm_ch_id_map:
-            remainder.append(crm_ch_id_map[crm_contact['id']])
+        if crm_contact['contact_id'] in crm_ch_id_map:
+            remainder.append(crm_ch_id_map[crm_contact['contact_id']])
         else:
             missing.append(crm_contact)
     return (missing, remainder)
@@ -302,7 +302,7 @@ class CallHub(object):
             if not new_contact:
                 self.logger.warn('Failed to create or retrieve contact: %s' % str(ch_contact))
             else:
-                existing.append(new_contact['id'])
+                existing.append(new_contact['pk_str']) # id as a string
 
         # Update the phonebook with all these CallHub contact ids
         result = self.phonebook_add_existing(
