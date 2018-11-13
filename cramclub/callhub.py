@@ -305,7 +305,8 @@ class CallHub(object):
                 existing.append(new_contact['id'])
 
         # Update the phonebook with all these CallHub contact ids
-        result = self.phonebook_add_existing(phonebook_id=phonebook_id, ch_contact_ids=existing)
+        result = self.phonebook_add_existing(
+            phonebook_id=phonebook_id, ch_contact_ids=existing)
         if int(result['count']) < len(existing):
             self.logger.warn('CallHub.phonebook_update():' + \
             'Failed to add to phonebook %s: %s' % (phonebook_id, str(existing)))
