@@ -259,8 +259,7 @@ class CallHub(object):
         response = post(
             url=phonebook_contacts,
             headers=headers,
-            data=json.dumps({'contact_ids': ch_contact_ids}),
-            allow_redirects=False)
+            data=json.dumps({'contact_ids': ch_contact_ids}))
         content = {}
         if response.ok:
             self.logger.info(
