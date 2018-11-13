@@ -49,14 +49,19 @@ class CramIo(object):
         Pull the contact list for the group from CiviCRM,
         then update corresponding CallHub phonebook.
         """
-        self.logger.debug(' - { crm: "%s", ch: "%s" }' %
+        self.logger.debug('{crm: "%s", ch: "%s"}' %
                           (crm_group_id, phonebook_id))
         crm_contacts = self.crmpull.group(crm_group_id)
-        self.club.phonebook_update(
-            phonebook_id=phonebook_id,
-            crm_contacts=crm_contacts,
-            crm_ch_id_map=self.crm_ch_id_map)
-
+        if crm_contacts:
+            self.club.phonebook_update(
+                phonebook_id=phonebook_id,
+                crm_contacts=crm_contacts,
+                crm_ch_id_map=self.crm_ch_id_map)
+        elif crm_contacts is None:
+            # Timed out!
+            self.logger.warn('CiviCRM group contacts retrieval timed out. %s' % crm_group_id)
+        else:
+            self.logger.info('CiviCRM group %s is empty.' % crm_group_id)
 
     def process_groups(self):
         """Use the engine's configuration to control this thread's activity."""
