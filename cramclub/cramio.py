@@ -95,7 +95,7 @@ class CramIo(object):
             # Write CSV output of the generated crm ch id mapping.
             with open(csv_file_path, 'w', newline='') as csvfile:
                 csv_writer = csv.writer(csvfile, dialect='excel')
-                for ch_id, crm_id in self.crm_ch_id_map.items():
+                for crm_id, ch_id in self.crm_ch_id_map.items():
                     csv_writer.writerow([crm_id, ch_id])
                 self.logger.info('Created CSV cache file: "%s"' % csv_file_path)
             if only_create_cache:
