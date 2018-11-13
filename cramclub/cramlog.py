@@ -17,13 +17,18 @@ class CramLog(object):
     _DEFAULT_LOG_FILE = APP_NAME
     instance = None
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, **kwargs):
         # Check for log directory defined by the environment
         if 'CRAMCLUB_LOG_DIR' in os.environ:
             self.log_dir = os.environ['CRAMCLUB_LOG_DIR']
 
+        self.instance = 'test'
         if 'instance' in kwargs:
             self.instance = kwargs['instance']
+
+        self.default_log_level = logging.DEBUG if self.instance == 'test' else logging.ERROR
+        if 'loglevel' in kwargs:
+            self.default_log_level = kwargs['loglevel']
 
         # If none specified then use platform specific default location
         if not hasattr(self, 'log_dir'):
@@ -45,10 +50,9 @@ class CramLog(object):
         ich.setFormatter(formatter)
         self.init_logger.addHandler(ich)
 
-        print('Log output at: ' + self.log_dir.as_posix())
-
         if not os.path.exists(self.log_dir):
             os.mkdir(self.log_dir)
+        print('Log output at: ' + self.log_dir.as_posix())
 
         self._logger = logging.getLogger(APP_NAME + '.engine')
         self._logger.setLevel(logging.DEBUG)
@@ -56,7 +60,7 @@ class CramLog(object):
         log_path = self.log_dir / (self._DEFAULT_LOG_FILE + 
                                   dot_or_nothing(self.instance) + '.log')
         fh = logging.FileHandler(log_path)
-        fh.setLevel(logging.DEBUG)
+        fh.setLevel(self.default_log_level)
         # create console handler with a higher log level
         ch = logging.StreamHandler()
         ch.setLevel(logging.ERROR)

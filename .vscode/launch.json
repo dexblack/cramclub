@@ -9,7 +9,7 @@
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/cramclub/cramclub.py",
-            "args": ["start", "-i", "prod"]
+            "args": ["--loglevel", "DEBUG", "start", "-i", "prod"]
         },
         {
             "name": "Python: Test",
