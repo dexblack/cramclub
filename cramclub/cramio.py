@@ -18,6 +18,7 @@ class CramIo(object):
         self.cram = CramCfg.instance() # pylint: disable-msg=E1102
         self.crmpull = CramPull.instance() # pylint: disable-msg=E1101
         self.club = CallHub.instance() # pylint: disable-msg=E1101
+        self.crm_ch_id_map = {}
 
 
     def start_process(self):
@@ -25,8 +26,9 @@ class CramIo(object):
         when = time.strptime(self.cram.cfg['runat'], '%H:%M')
         now = time.localtime()
         start = (now.tm_hour == when.tm_hour and
-            now.tm_min == when.tm_min or (
-                'instance' in self.cram.cfg and self.cram.cfg['instance'] == 'test'))
+                 now.tm_min == when.tm_min or (
+                     'instance' in self.cram.cfg and
+                     self.cram.cfg['instance'] == 'test'))
         return start
 
 
@@ -35,20 +37,15 @@ class CramIo(object):
         return os.path.exists(self.cram.cfg['stop_file_path'])
 
 
-    def process_group(self, crm, group):
+    def process_group(self, crm_group_id, phonebook_id):
         """
         Pull the contact list for the group from CiviCRM,
-        then update corresponding club phonebook.
+        then update corresponding CallHub phonebook.
         """
-        self.logger.info(' - { crm: "%s", ch: "%s"' % (group["crm"], group["ch"]))
-        crm_contacts = self.crmpull.group(group['crm'])
-
-        if self.stop_process():
-            self.logger.info('Stopping: club phonebook not updated: "%s"' % group['ch'])
-            return
-
+        self.logger.debug(' - { crm: "%s", ch: "%s" }' % (crm_group_id, phonebook_id))
+        crm_contacts = self.crmpull.group(crm_group_id)
         self.club.phonebook_update(
-            phonebook_id=group['ch'],
+            phonebook_id=phonebook_id,
             crm_contacts=crm_contacts,
             crm_ch_id_map=self.crm_ch_id_map)
 
@@ -58,7 +55,7 @@ class CramIo(object):
         start = time.time()
         self.crm_ch_id_map = self.club.contacts()
         end = time.time()
-        self.logger.info("Retrieving all club contacts took: %d seconds" % int(end-start))
+        self.logger.info('Retrieving all club contacts took: %d seconds' % int(end-start))
         if ('csv_cache' in self.cram.cfg and
             'csv_file_path' in self.cram.cfg and
             'create' in self.cram.cfg['csv_cache'] and
@@ -81,6 +78,7 @@ class CramIo(object):
         self.logger.info('Groups:')
         for group in self.cram.cfg['groups']:
             if self.stop_process():
-                self.logger.info('Stopped before updating phonebook: "%s"' % group['ch'])
+                self.logger.info('Stopping: Halted prior to phonebook: "%s"' % group['ch'])
                 break
-            self.process_group(group=group)
+            self.process_group(crm_group_id=group['crm'], phonebook_id=group['ch'])
+            
