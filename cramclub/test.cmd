@@ -1,2 +1,2 @@
 @echo off
-python cramclub.py start
+python cramclub.py start -i test
