@@ -38,9 +38,9 @@ def test_add_contact_to_callhub():
     logger.debug('Existing contact returned')
 
     ch_contact1 = result1['contact']
-    if ch_id != ch_contact1['id']:
+    if ch_id != ch_contact1['pk_str']:
         return
 
-    result2 = club.update_contact(ch_contact1['id'], ch_contact)
+    result2 = club.update_contact(ch_contact1['pk_str'], ch_contact)
     if result2:
         logger.debug('test_add_contact_to_callhub() updated contact')
