@@ -12,18 +12,26 @@ from cramconst import CUSTOM_FIELDS, CUSTOM_FIELD_CONTACTID
 
 
 def missing_callhub_contacts(ch_contacts, crm_contacts, crm_ch_id_map):
-    """Gather callhub entries not found in CiviCRM id map"""
-    ch_ids = [crm_ch_id_map[crm_contact['contact_id']]
-              for crm_contact in crm_contacts]
+    """Gather CallHub contacts not found in CiviCRM id map."""
+    missing = []
+    if not ch_contacts:
+        return missing
 
-    missing = [ch_contact['id'] for ch_contact in ch_contacts
-               if ch_contact['id'] not in ch_ids]
+    ch_ids = []
+    for crm_contact in crm_contacts:
+        if crm_contact['contact_id'] in crm_ch_id_map:
+            ch_ids.append(crm_ch_id_map[crm_contact['contact_id']])
+
+    for ch_contact in ch_contacts:
+        contact_id = ch_contact['pk_str'] # id as a string value
+        if contact_id not in ch_ids:
+            missing.append(contact_id)
 
     return missing
 
 
 def gather_callhub_ids(id_map, callhub_contacts):
-    """Examine CallHub contact details for CiviCRM id"""
+    """Examine CallHub contact details for CiviCRM id."""
     for callhub_contact in callhub_contacts:
         if (CUSTOM_FIELDS in callhub_contact and
                 callhub_contact[CUSTOM_FIELDS] and
@@ -36,7 +44,7 @@ def gather_callhub_ids(id_map, callhub_contacts):
                 continue
             # Assume a valid CiviCRM identifier in this custom field
             # and add it to the map. As string everywhere.
-            id_map[crm_id] = str(callhub_contact['id'])
+            id_map[crm_id] = callhub_contact['pk_str'] # id as a string
 
 
 def missing_crm_contacts(crm_contacts, crm_ch_id_map):
@@ -45,7 +53,7 @@ def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     missing, remainder = ([], []) # This is the return value
     for crm_contact in crm_contacts:
         if crm_contact['id'] in crm_ch_id_map:
-            remainder.append(crm_contact)
+            remainder.append(crm_ch_id_map[crm_contact['id']])
         else:
             missing.append(crm_contact)
     return (missing, remainder)
@@ -106,9 +114,10 @@ class CallHub(object):
             content = response.json()
             self.logger.info('Created Contact: ' + str(content))
         elif response.status_code == 400:
-            content = response.json()
+            response2 = response.json()
+            content = response2['contact']
             self.logger.warn('Create Contact bad request: HTTP Error %d' % response.status_code)
-            self.logger.warn('Create Contact bad request: %s' % content['detail'])
+            self.logger.warn('Create Contact bad request: %s' % response2['detail'])
         else:
             self.logger.error('Create Contact failed: HTTP Error %d' % response.status_code)
         return content
@@ -162,35 +171,46 @@ class CallHub(object):
 
     def phonebook_get_contacts(self, phonebook_id):
         """Retrieve all contacts in a phonebook"""
-        phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
-        response = get(url=phonebook_contacts, headers=self.headers)
-        return response.results
+        contacts = []
+        next_url = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
+        while next_url:
+            response = get(url=next_url, headers=self.headers)
+            if response.ok:
+                content = response.json()
+                contacts.extend(content['results'])
+                next_url = content['next']
+            else:
+                next_url = None
+        return contacts
 
 
     def phonebook_clear(self, phonebook_id, contact_ids):
         """Retrieve all contacts, then build a delete all request"""
         phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
         if contact_ids:
-            data = {'contact_ids': contact_ids}
+            headers = {'Content-Type': 'application/json'}
+            headers.update(self.headers)
             delete_result = delete(url=phonebook_contacts,
-                                   headers=self.headers,
-                                   data=data)
-            return delete_result
+                                   headers=headers,
+                                   data=json.dumps({'contact_ids': contact_ids}))
+            if delete_result.ok:
+                return delete_result.json()
         # Consistent return result makes calling code cleaner.
         return {
             'url': self.url,
             'id': phonebook_id,
-            'count': 0
+            'count': -1,
+            'error': delete_result.text
             }
 
 
     def phonebook_clear_all(self, phonebook_id):
         """Retrieve all contacts, then build a delete all request"""
-        phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
-        response = get(url=phonebook_contacts, headers=self.headers)
-        contact_ids = [contact['contact'] for contact in response['results']]
-        delete_result = self.phonebook_clear(phonebook_id=phonebook_id, contact_ids=contact_ids)
-        assert delete_result['count'] == '0'
+        contacts = self.phonebook_get_contacts(phonebook_id=phonebook_id)
+        if contacts:
+            contact_ids = [contact['contact'] for contact in contacts]
+            delete_result = self.phonebook_clear(phonebook_id=phonebook_id, contact_ids=contact_ids)
+            assert delete_result['count'] == '0'
 
 
     def make_callhub_contact_from(self, crm_contact):
@@ -229,79 +249,60 @@ class CallHub(object):
             }
 
 
-    def phonebook_create_contact(self, phonebook_id, ch_contact):
-        """
-        Add an existing contact (if existing one matches normalise ch_contact['contact']),
-        otherwise create a new contact and add its id to the phonebook.
-        NB: See also 'create_contact'.
-        """
-        phonebook_create_contact = '%s/phonebooks/%s/create_contact' % (self.url, phonebook_id)
-        response = post(url=phonebook_create_contact,
-                        headers=self.headers,
-                        data=ch_contact)
-        self.logger.info(
-            'Phonebook: "%s" New contact: "%s"' %
-            (phonebook_id, ch_contact[CUSTOM_FIELDS][CUSTOM_FIELD_CONTACTID]))
-        content = {}
-        if response.ok:
-            content = response.json()
-            self.logger.info(str(content))
-        else:
-            self.logger.debug(response)
-        return content
-
-
     def phonebook_add_existing(self, phonebook_id, ch_contact_ids):
         """Add a list of contacts to a phonebook."""
-        phonebook_add_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
-        response = post(url=phonebook_add_contacts,
-                        headers=self.headers,
-                        data={'contact_ids': ch_contact_ids})
-        self.logger.debug(
-            'Phonebook: "%s" Add existing contacts: "%s"' %
-            (phonebook_id, str(ch_contact_ids)))
+        phonebook_contacts = '%s/phonebooks/%s/contacts' % (self.url, phonebook_id)
+        headers = {'Content-Type': 'application/json'}
+        headers.update(self.headers)
+        response = post(url=phonebook_contacts,
+                        headers=headers,
+                        data=json.dumps({'contact_ids': ch_contact_ids}))
+        content = {}
         if response.ok:
-            self.logger.info(response.content)
+            self.logger.info(
+                'Phonebook: "%s" Add existing contacts: "%s"' %
+                (phonebook_id, str(ch_contact_ids)))
+            #self.logger.debug(response.content)
+            content = response.json()
         else:
-            self.logger.debug(response)
-        return response.content
+            self.logger.error(response.text)
+        return content
 
 
     def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
         """Create all contacts and add them to phonebook"""
         # Remove contacts not in the crm_contacts list
+        ch_contacts = self.phonebook_get_contacts(phonebook_id)
         missing = missing_callhub_contacts(
-            ch_contacts=self.phonebook_get_contacts(phonebook_id),
+            ch_contacts=ch_contacts,
             crm_contacts=crm_contacts,
             crm_ch_id_map=crm_ch_id_map)
 
-        clear_result = self.phonebook_clear(
-            phonebook_id=phonebook_id,
-            contact_ids=missing)
-
-        # Returned 'count' is how many remain in the phonebook. AFAICT.
-        assert ('count' in clear_result and
-                clear_result['count'] == len(crm_contacts) - len(missing))
+        if missing:
+            clear_content = self.phonebook_clear(
+                phonebook_id=phonebook_id,
+                contact_ids=missing)
+            assert int(clear_content['count']) == len(ch_contacts) - len(missing)
 
         # Identify new CRM contacts
-        ## Note: Without the dict map this would be O(N*N)!
-        missing, remainder = missing_crm_contacts(crm_contacts, crm_ch_id_map)
+        ## Note: existing is a list of CallHub ids.
+        missing, existing = missing_crm_contacts(crm_contacts, crm_ch_id_map)
+        assert len(missing) + len(existing) == len(crm_contacts)
 
         # Create missing contacts in the phonebook
         for crm_contact in missing:
-            result = self.phonebook_create_contact(
-                phonebook_id,
-                self.make_callhub_contact_from(crm_contact))
-            if not result:
-                self.logger.warn('CallHub.phonebook_update():' + \
-                'Failed to add to phonebook %s: %s, %s %s' % (
-                    phonebook_id,
-                    crm_contact['contact_id'],
-                    crm_contact['first_name'],
-                    crm_contact['last_name']))
+            if not crm_contact['phone']:
+                self.logger.warn('Missing phone number: %s' % str(crm_contact))
+                continue
+            ch_contact = self.make_callhub_contact_from(crm_contact)
+            new_contact = self.create_contact(ch_contact)
+            if not new_contact:
+                self.logger.warn('Failed to create or retrieve contact: %s' % str(ch_contact))
+            else:
+                existing.append(new_contact['id'])
 
-        # Add the remaining existing contacts to the phonebook
-        result = self.phonebook_add_existing(
-            phonebook_id,
-            [crm_ch_id_map[crm_contact['contact_id']]
-             for crm_contact in remainder])
+        # Update the phonebook with all these CallHub contact ids
+        result = self.phonebook_add_existing(phonebook_id=phonebook_id, ch_contact_ids=existing)
+        if int(result['count']) < len(existing):
+            self.logger.warn('CallHub.phonebook_update():' + \
+            'Failed to add to phonebook %s: %s' % (phonebook_id, str(existing)))
