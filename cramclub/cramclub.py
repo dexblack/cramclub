@@ -8,6 +8,8 @@ Update CallHub phone books based upon a list of matching CiviCRM smart group ide
 Notes:
 Configurable to update on a schedule. See command line arguments 'at'.
 CallHub contacts have a custom ContactID field corresponding to the CiviCRM contact.
+Multiple instances may be executed on the same server controlled by
+different configurations via the --instance 'name' parameter.
 """
 import sys
 import argparse
@@ -16,43 +18,64 @@ from cramlog import CramLog
 from cramcfg import CramCfg
 
 
-def get_args(prog, argv):
+def get_args(argv):
     """
     Parse command line and execute the required operation.
     """
-    logger = CramLog.instance()
-    logger.info("get_args: " + prog)
     parser = argparse.ArgumentParser(
         description='CiviCRM smart groups to CallHub phonebooks updater.')
 
-    parser.add_argument('--version', action='version', version='%(prog)s 0.1')
+    parser.add_argument('--version', action='version', version='%(prog)s 0.2')
 
     subparsers = parser.add_subparsers(title='subcommands',
                                        description='valid sub-commands')
 
-    parser_start = subparsers.add_parser('start',description='Execute the updater using the configured schedule')
-    parser_start.add_argument('--civicrm_site_key', help='CiviCRM Site Key')
-    parser_start.add_argument('--civicrm_api_key', help='CiviCRM API Key')
-    parser_start.add_argument('--callhub_api_key', help='CallHub API Key')
-    parser_start.add_argument('--timeout', type=int, default=5, help='REST API call timeout in seconds')
-    parser_start.add_argument('--runat', help='Time of day to run the job')
+    parser_start = subparsers.add_parser('start',
+        description='Execute the updater using the configured schedule')
+    parser_start.add_argument('--instance', '-i',
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             required=True)
+    parser_start.add_argument('--civicrm_site_key', help='[env] CiviCRM Site key')
+    parser_start.add_argument('--civicrm_api_key', help='[env] CiviCRM API key')
+    parser_start.add_argument('--callhub_api_key', help='[env] CallHub API key')
+    parser_start.add_argument('--timeout', '-t', type=int, help='REST API call timeout in seconds')
+    parser_start.add_argument('--runat', '-r', help='Time of day to run the job. [env] CRAMCLUB_RUNAT')
+
     parser_start.set_defaults(cmd=cramcmd.start)
 
-    parser_stop = subparsers.add_parser('stop', description='Halt a running updater')
+    parser_stop = subparsers.add_parser('stop',
+                                        description='Halt a running updater')
+    parser_stop.add_argument('--instance', '-i',
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             required=True)
     parser_stop.set_defaults(cmd=cramcmd.stop)
 
-    parser_restart = subparsers.add_parser('restart', description='Halt a running updater')
+    parser_restart = subparsers.add_parser('restart',
+                                           description='Retarting a running updater')
+    parser_restart.add_argument('--instance', '-i',
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             required=True)
     parser_restart.set_defaults(cmd=cramcmd.restart)
 
-    return parser.parse_args(argv)
+    parser_test = subparsers.add_parser('test',
+                                        description='Halt a running updater')
+    parser_test.add_argument('--instance', '-i',
+                             help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+                             default='test')
+    parser_test.set_defaults(cmd=cramcmd.test)
+
+    args = parser.parse_args(argv)
+    return args
 
 
-def main(prog, argv):
+def main(argv):
     """
     Determine the action to take and execute it.
     """
-    args = get_args(prog, argv)
-    config = CramCfg.instance()
+    args = get_args(argv)
+    CramLog.initialize(instance=args.instance) # pylint: disable-msg=E1101
+    CramCfg.initialize(instance=args.instance) # pylint: disable-msg=E1101
+    config = CramCfg.instance() # pylint: disable-msg=E1101
     config.update(args)
 
     if "cmd" in args:
@@ -62,4 +85,4 @@ def main(prog, argv):
 # MAIN script execution begins here
 if __name__ == "__main__":
     # execute only if run as a script
-    main(prog=sys.argv[0], argv=sys.argv[1:])
+    main(argv=sys.argv[1:])
