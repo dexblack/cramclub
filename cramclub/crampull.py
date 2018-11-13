@@ -25,11 +25,11 @@ class CramPull(object):
 
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self._api = CiviCRM(
-            url = cram.cfg['civicrm']['url'],
-            site_key = cram.cfg['civicrm']['site_key'],
-            api_key = cram.cfg['civicrm']['api_key'],
-            use_ssl = True,
-            timeout = cram.cfg['timeout'])
+            url=cram.cfg['civicrm']['url'],
+            site_key=cram.cfg['civicrm']['site_key'],
+            api_key=cram.cfg['civicrm']['api_key'],
+            use_ssl=True,
+            timeout=cram.cfg['timeout'])
 
 
     def contact(self, crm_id):
@@ -51,14 +51,16 @@ class CramPull(object):
         """ Retrieve all contacts in a group. """
         contacts = []
         try:
-            contacts = self._api.get('Contact',
-                                     group=[group_id],
-                                     limit=5000,
-                                     offset=0)
+            contacts = self._api.get(
+                'Contact',
+                group=[group_id],
+                limit=5000,
+                offset=0)
 
             self.logger.info('Contacts: {:d}'.format(len(contacts)))
 
         except ReadTimeout as err:
-            self.logger.error(err)
+            self.logger.critical(err)
+            return None
 
         return contacts
