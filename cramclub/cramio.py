@@ -60,28 +60,53 @@ class CramIo(object):
 
     def process_groups(self):
         """Use the engine's configuration to control this thread's activity."""
-        start = time.time()
-        self.crm_ch_id_map = self.club.contacts()
-        end = time.time()
-        self.logger.info(
-            'Retrieving all club contacts took: %d seconds' % int(end-start))
-        if ('csv_cache' in self.cram.cfg and
-                'csv_file_path' in self.cram.cfg and
-                'create' in self.cram.cfg['csv_cache'] and
-                self.cram.cfg['csv_cache']['create']):
-            # Write CSV output of the generated crm ch id mapping.
-            with open(self.cram.cfg['csv_file_path'], 'w', newline='') as csvfile:
-                csv_writer = csv.writer(csvfile, dialect='excel')
-                for ch, crm in self.crm_ch_id_map.items():
-                    csv_writer.writerow([ch, crm])
-                self.logger.info('Created CSV cache file: "%s"' %
-                                 self.cram.cfg['csv_file_path'])
 
-        if ('csv_cache' in self.cram.cfg and
-                'only' in self.cram.cfg['csv_cache'] and
-                self.cram.cfg['csv_cache']['only']):
-            # Stop processing here
-            return
+        has_cache_cfg = 'csv_cache' in self.cram.cfg
+
+        create_cache = has_cache_cfg and \
+            'create' in self.cram.cfg['csv_cache'] and \
+            self.cram.cfg['csv_cache']['create']
+
+        only_create_cache = create_cache and \
+                'only' in self.cram.cfg['csv_cache'] and \
+                self.cram.cfg['csv_cache']['only']
+
+        use_cache = has_cache_cfg and not create_cache and \
+            'use' in self.cram.cfg['csv_cache'] and \
+            self.cram.cfg['csv_cache']['use']
+
+        if create_cache or not use_cache:
+            start = time.time()
+            self.crm_ch_id_map = self.club.contacts()
+            end = time.time()
+            self.logger.info(
+                'Retrieving all club contacts took: %d seconds' % int(end-start))
+
+        if create_cache or use_cache:
+            csv_file_path = self.cram.cfg['csv_file_path'] \
+                if 'csv_file_path' in self.cram.cfg else None
+
+        if create_cache:
+            # Write CSV output of the generated crm ch id mapping.
+            with open(csv_file_path, 'w', newline='') as csvfile:
+                csv_writer = csv.writer(csvfile, dialect='excel')
+                for ch_id, crm_id in self.crm_ch_id_map.items():
+                    csv_writer.writerow([crm_id, ch_id])
+                self.logger.info('Created CSV cache file: "%s"' % csv_file_path)
+            if only_create_cache:
+                # Stop processing here
+                return
+
+        elif use_cache:
+            # Read CSV output of the generated crm ch id mapping.
+            self.logger.info('Using CSV cache file: "%s"' % csv_file_path)
+            if not os.path.exists(csv_file_path):
+                self.logger.critical('CSV file missing: %s' % csv_file_path)
+                return
+            with open(csv_file_path, 'r', newline='') as csvfile:
+                csv_reader = csv.reader(csvfile, dialect='excel')
+                for row in csv_reader:
+                    self.crm_ch_id_map[row[0]] = row[1]
 
         self.logger.info('Groups:')
         for group in self.cram.cfg['groups']:
