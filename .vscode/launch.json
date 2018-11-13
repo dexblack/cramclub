@@ -14,7 +14,8 @@
             "name": "Python: Test",
             "type": "python",
             "request": "launch",
-            "program": "${workspaceFolder}/cramclub/cramtest.py"
+            "program": "${workspaceFolder}/cramclub/cramclub.py",
+            "args": ["test"]
         },
         {
             "name": "Python: Current File",
