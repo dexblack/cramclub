@@ -114,10 +114,15 @@ class CallHub(object):
             content = response.json()
             self.logger.info('Created Contact: ' + str(content))
         elif response.status_code == 400:
-            response2 = response.json()
-            content = response2['contact']
             self.logger.warn('Create Contact bad request: HTTP Error %d' % response.status_code)
-            self.logger.warn('Create Contact bad request: %s' % response2['detail'])
+            response2 = response.json()
+            if 'non_field_errors' in response2:
+                self.logger.error(str(response2['non_field_errors']))
+            elif 'email' in response2:
+                self.logger.error(str(response2['email']))
+            else:
+                self.logger.warn(response2['detail'])
+                content = response2['contact']
         else:
             self.logger.error('Create Contact failed: HTTP Error %d' % response.status_code)
         return content
@@ -324,6 +329,10 @@ class CallHub(object):
             else:
                 existing.append(new_contact['pk_str']) # id as a string
 
+        if not existing:
+            # We're done here.
+            return
+
         # Update the phonebook with all these CallHub contact ids.
         result = self.phonebook_add_existing(
             phonebook_id=phonebook_id, ch_contact_ids=existing)
@@ -332,4 +341,3 @@ class CallHub(object):
             'Failed to add to phonebook %s: %s' % (phonebook_id, result['error']))
         else:
             assert int(result['count']) >= len(existing)
-
