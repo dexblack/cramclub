@@ -57,35 +57,38 @@ class CramLog(object):
         self._logger = logging.getLogger(APP_NAME + '.engine')
         self._logger.setLevel(logging.DEBUG)
         # create file handler which logs even debug messages
-        log_path = self.log_dir / (self._DEFAULT_LOG_FILE + 
-                                  dot_or_nothing(self.instance) + '.log')
-        fh = logging.FileHandler(log_path)
-        fh.setLevel(self.default_log_level)
+        log_path = self.log_dir / (
+            self._DEFAULT_LOG_FILE + dot_or_nothing(self.instance) + '.log')
+        file_handler = logging.FileHandler(log_path)
+        file_handler.setLevel(self.default_log_level)
         # create console handler with a higher log level
-        ch = logging.StreamHandler()
-        ch.setLevel(logging.ERROR)
-        ch.setFormatter(formatter)
-        fh.setFormatter(formatter)
+        console_handler = logging.StreamHandler()
+        console_handler.setLevel(logging.ERROR)
+        console_handler.setFormatter(formatter)
+        file_handler.setFormatter(formatter)
         # add the handlers to logger
-        self._logger.addHandler(ch)
-        self._logger.addHandler(fh)        
+        self._logger.addHandler(console_handler)
+        self._logger.addHandler(file_handler)
 
 
-    def critical(self, msg, *args, **kwargs):
+    def critical(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
         self._logger.critical(msg, *args, **kwargs)
 
 
-    def error(self, msg, *args, **kwargs):
+    def error(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
         self._logger.error(msg, *args, **kwargs)
 
 
-    def warn(self, msg, *args, **kwargs):
+    def warn(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
         self._logger.warn(msg, *args, **kwargs)
 
 
-    def info(self, msg, *args, **kwargs):
+    def info(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
         self._logger.info(msg, *args, **kwargs)
 
 
-    def debug(self, msg, *args, **kwargs):
+    def debug(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
         self._logger.debug(msg, *args, **kwargs)
+
+    def log(self, level, msg, *arg, **kwargs): # pylint: disable-msg=C0111
+        self._logger.log(level, msg, *arg, **kwargs)

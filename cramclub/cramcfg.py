@@ -49,32 +49,32 @@ class CramCfg(object):
 
         self.cfg['stop_file_path'] = (self.cfg['dir'] / (
             APP_NAME + dot_or_nothing(self.cfg['instance']) + '.stop')).as_posix()
-        print('Stop file path: ' + self.cfg['stop_file_path'])
+        self.logger.log(70, 'Stop file path: ' + self.cfg['stop_file_path'])
 
         self.defaults_path = self.cfg['dir'] / (
             'defaults' + dot_or_nothing(self.cfg['instance']) + '.yaml')
 
-        print('Default configuration: ' + self.defaults_path.as_posix())
+        self.logger.log(70, 'Default configuration: ' + self.defaults_path.as_posix())
         if os.path.exists(self.cfg['dir']):
             # Build the correct configuration file name for this instance.
             self.cfg_path = self.cfg['dir'] / (
                 APP_NAME + dot_or_nothing(self.cfg['instance']) + '.yaml')
 
-            print('Configuration file path: ' + self.cfg_path.as_posix())
+            self.logger.log(70, 'Configuration file path: ' + self.cfg_path.as_posix())
 
         if os.path.exists(self.defaults_path.as_posix()):
             with open(self.defaults_path.as_posix()) as stream:
                 try:
                     self.cfg = yaml.load(stream)
-                except yaml.YAMLError as e:
-                    self.logger.critical(str(e))
+                except yaml.YAMLError as err:
+                    self.logger.critical(str(err))
 
         if os.path.exists(self.cfg_path.as_posix()):
             with open(self.cfg_path.as_posix()) as stream:
                 try:
                     self.cfg.update(yaml.load(stream))
-                except yaml.YAMLError as e:
-                    self.logger.critical(str(e))
+                except yaml.YAMLError as err:
+                    self.logger.critical(str(err))
         else:
             raise RuntimeError('Missing configuration file: ' + self.cfg_path.as_posix())
 
