@@ -2,7 +2,7 @@
 Wrapper for CallHub operations.
 """
 import json
-from requests import get, post, put, delete
+from requests import get, post, put, delete, exceptions
 from singleton.singleton import Singleton
 
 from cramlog import CramLog
@@ -145,19 +145,25 @@ class CallHub(object):
         """Retrieve an id {crm:ch_id} mapping of all contacts in CallHub"""
 
         crm_ch_id_map = {}
-        page = 1
-        next_page = self.url + '/contacts?page=%d' % page
-        while next_page:
-            get_response = get(url=next_page, headers=self.headers)
-            if get_response.status_code != 200:
-                self.logger.critical('Failed to retrieve CallHub Contacts page %d' % page)
-                next_page = None
-                continue
+        try:
+            page = 1
+            next_page = self.url + '/contacts?page=%d' % page
+            while next_page:
+                get_response = get(url=next_page, headers=self.headers)
+                if get_response.status_code != 200:
+                    self.logger.critical('Failed to retrieve CallHub Contacts page %d' % page)
+                    next_page = None
+                    continue
 
-            response_content = get_response.json()
-            next_page = response_content['next']
-            page = page + 1
-            gather_callhub_ids(id_map=crm_ch_id_map, callhub_contacts=response_content['results'])
+                response_content = get_response.json()
+                next_page = response_content['next']
+                page = page + 1
+                gather_callhub_ids(
+                    id_map=crm_ch_id_map,
+                    callhub_contacts=response_content['results'])
+
+        except exceptions.ConnectionError as err:
+            self.logger.error(str(err))
 
         return crm_ch_id_map
 
