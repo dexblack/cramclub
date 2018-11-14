@@ -12,11 +12,18 @@
             "args": ["--loglevel", "DEBUG", "start", "-i", "prod"]
         },
         {
-            "name": "Python: Cache",
+            "name": "Python: Cache Start",
             "type": "python",
             "request": "launch",
             "program": "${workspaceFolder}/cramclub/cramclub.py",
-            "args": ["--loglevel", "WARNING", "start", "-i", "cache"]
+            "args": ["start", "-i", "cache"]
+        },
+        {
+            "name": "Python: Cache Stop",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/cramclub/cramclub.py",
+            "args": ["stop", "-i", "cache"]
         },
         {
             "name": "Python: Test",
