@@ -44,28 +44,8 @@ class CramIo(object):
         return os.path.exists(self.cram.cfg['stop_file_path'])
 
 
-    def process_group(self, crm_group_id, phonebook_id):
-        """
-        Pull the contact list for the group from CiviCRM,
-        then update corresponding CallHub phonebook.
-        """
-        self.logger.debug('{crm: "%s", ch: "%s"}' %
-                          (crm_group_id, phonebook_id))
-        crm_contacts = self.crmpull.group(crm_group_id)
-        if crm_contacts:
-            self.club.phonebook_update(
-                phonebook_id=phonebook_id,
-                crm_contacts=crm_contacts,
-                crm_ch_id_map=self.crm_ch_id_map)
-        elif crm_contacts is None:
-            # Timed out!
-            self.logger.warn('CiviCRM group contacts retrieval timed out. %s' % crm_group_id)
-        else:
-            self.logger.info('CiviCRM group %s is empty.' % crm_group_id)
-
-    def process_groups(self):
-        """Use the engine's configuration to control this thread's activity."""
-
+    def get_contact_ids_map(self):
+        """Use the engine's configuration determine where to gather the contact list from."""
         has_cache_cfg = 'csv_cache' in self.cram.cfg
 
         create_cache = has_cache_cfg and \
@@ -76,11 +56,13 @@ class CramIo(object):
                 'only' in self.cram.cfg['csv_cache'] and \
                 self.cram.cfg['csv_cache']['only']
 
-        use_cache = has_cache_cfg and not create_cache and \
+        use_cache = has_cache_cfg and \
             'use' in self.cram.cfg['csv_cache'] and \
             self.cram.cfg['csv_cache']['use']
 
         if create_cache or not use_cache:
+            # Retrieve all contacts from CallHub
+            # NB: This can take up to an hour for 30000 contacts.
             start = time.time()
             self.crm_ch_id_map = self.club.contacts()
             end = time.time()
@@ -100,9 +82,9 @@ class CramIo(object):
                 self.logger.info('Created CSV cache file: "%s"' % csv_file_path)
             if only_create_cache:
                 # Stop processing here
-                return
+                return False
 
-        elif use_cache:
+        if use_cache:
             # Read CSV output of the generated crm ch id mapping.
             self.logger.info('Using CSV cache file: "%s"' % csv_file_path)
             if not os.path.exists(csv_file_path):
@@ -112,6 +94,34 @@ class CramIo(object):
                 csv_reader = csv.reader(csvfile, dialect='excel')
                 for row in csv_reader:
                     self.crm_ch_id_map[row[0]] = row[1]
+
+        return True
+
+
+    def process_group(self, crm_group_id, phonebook_id):
+        """
+        Pull the contact list for the group from CiviCRM,
+        then update corresponding CallHub phonebook.
+        """
+        self.logger.debug('{crm: "%s", ch: "%s"}' %
+                          (crm_group_id, phonebook_id))
+        crm_contacts = self.crmpull.group(crm_group_id)
+        if crm_contacts:
+            self.club.phonebook_update(
+                phonebook_id=phonebook_id,
+                crm_contacts=crm_contacts,
+                crm_ch_id_map=self.crm_ch_id_map)
+        elif crm_contacts is None:
+            # Timed out!
+            self.logger.warn('CiviCRM group contacts retrieval timed out. %s' % crm_group_id)
+        else:
+            self.logger.info('CiviCRM group %s is empty.' % crm_group_id)
+
+
+    def process_groups(self):
+        """Loop through all the configured groups and update them."""
+        if not self.get_contact_ids_map():
+            return
 
         self.logger.info('Groups:')
         for group in self.cram.cfg['groups']:
