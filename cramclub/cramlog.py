@@ -79,8 +79,8 @@ class CramLog(object):
         self._logger.error(msg, *args, **kwargs)
 
 
-    def warn(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
-        self._logger.warn(msg, *args, **kwargs)
+    def warn(self, msg, *args, **kwargs): # pylint: disable-msg=C0111,W1505
+        self._logger.warn(msg, *args, **kwargs) # pylint: disable-msg=W1505
 
 
     def info(self, msg, *args, **kwargs): # pylint: disable-msg=C0111
