@@ -80,9 +80,6 @@ class CramIo(object):
                 for crm_id, ch_id in self.crm_ch_id_map.items():
                     csv_writer.writerow([crm_id, ch_id])
                 self.logger.info('Created CSV cache file: "%s"' % csv_file_path)
-            if only_create_cache:
-                # Stop processing here
-                return False
 
         if use_cache:
             # Read CSV output of the generated crm ch id mapping.
@@ -95,7 +92,7 @@ class CramIo(object):
                 for row in csv_reader:
                     self.crm_ch_id_map[row[0]] = row[1]
 
-        return True
+        return use_cache or (create_cache and not only_create_cache)
 
 
     def process_group(self, crm_group_id, phonebook_id):
