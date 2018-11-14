@@ -48,8 +48,8 @@ def stop():
     logger.log(70, 'Stopping')
 
     cram = CramCfg.instance() # pylint: disable-msg=E1101
-    with open(cram.cfg['stop_file_path'], 'w') as f:
-        f.write('Stop CramClub instance "%s" running' % cram.cfg['instance'])
+    with open(cram.cfg['stop_file_path'], 'w') as stop_file:
+        stop_file.write('Stop CramClub instance "%s" running' % cram.cfg['instance'])
 
 
 def restart():
