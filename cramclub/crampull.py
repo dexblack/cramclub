@@ -1,11 +1,12 @@
 """
 Retrieve CiviCRM group contact list data.
 """
+from requests.exceptions import ReadTimeout
 from singleton.singleton import Singleton
+
 from civicrm.civicrm import CiviCRM
 from cramcfg import CramCfg
 from cramlog import CramLog
-from requests.exceptions import ReadTimeout
 
 
 @Singleton
