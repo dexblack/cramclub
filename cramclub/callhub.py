@@ -50,13 +50,13 @@ def gather_callhub_ids(id_map, callhub_contacts):
 def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     """Return new list from cram that only has the contacts missing from club"""
     # Another O(N) operation dodged with dict lookup.
-    missing, remainder = ([], []) # This is the return value
+    missing, existing = ([], []) # This is the return value
     for crm_contact in crm_contacts:
         if crm_contact['contact_id'] in crm_ch_id_map:
-            remainder.append(crm_ch_id_map[crm_contact['contact_id']])
+            existing.append(crm_ch_id_map[crm_contact['contact_id']])
         else:
             missing.append(crm_contact)
-    return (missing, remainder)
+    return (missing, existing)
 
 
 
@@ -275,6 +275,15 @@ class CallHub(object):
             content = response.json()
         else:
             self.logger.error(response.text)
+            content = {
+                'url': '%s/phonebooks/%s/' % (self.url, phonebook_id),
+                'id': int(phonebook_id),
+                'owner': '',
+                'name': '',
+                'description': '',
+                'count': '+1',
+                'error': response.text
+                }
         return content
 
 
@@ -293,12 +302,17 @@ class CallHub(object):
                 contact_ids=missing)
             assert int(clear_content['count']) == len(ch_contacts) - len(missing)
 
-        # Identify new CRM contacts
+        # Identify new CRM contacts.
         ## Note: existing is a list of CallHub ids.
         missing, existing = missing_crm_contacts(crm_contacts, crm_ch_id_map)
         assert len(missing) + len(existing) == len(crm_contacts)
 
-        # Create missing contacts in the phonebook
+        # Skip adding contacts that are already in the phonebook.
+        for ch_contact in ch_contacts:
+            if ch_contact['pk_str'] in existing:
+                existing.remove(ch_contact['pk_str'])
+
+        # Create missing contacts.
         for crm_contact in missing:
             if not crm_contact['phone']:
                 self.logger.warn('Missing phone number: %s' % str(crm_contact))
@@ -310,9 +324,12 @@ class CallHub(object):
             else:
                 existing.append(new_contact['pk_str']) # id as a string
 
-        # Update the phonebook with all these CallHub contact ids
+        # Update the phonebook with all these CallHub contact ids.
         result = self.phonebook_add_existing(
             phonebook_id=phonebook_id, ch_contact_ids=existing)
-        if int(result['count']) < len(existing):
+        if result['count'] == '+1': # Special value to indicate failure.
             self.logger.warn('CallHub.phonebook_update():' + \
-            'Failed to add to phonebook %s: %s' % (phonebook_id, str(existing)))
+            'Failed to add to phonebook %s: %s' % (phonebook_id, result['error']))
+        else:
+            assert int(result['count']) >= len(existing)
+
