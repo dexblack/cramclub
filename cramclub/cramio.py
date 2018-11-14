@@ -7,7 +7,6 @@ import csv
 
 from cramcfg import CramCfg
 from cramlog import CramLog
-from cramconst import RETRY_TIME
 from crampull import CramPull
 from callhub import CallHub
 
