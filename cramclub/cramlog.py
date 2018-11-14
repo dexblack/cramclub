@@ -27,7 +27,7 @@ class CramLog(object):
             self.instance = kwargs['instance']
 
         self.default_log_level = logging.DEBUG if self.instance == 'test' else logging.ERROR
-        if 'loglevel' in kwargs:
+        if 'loglevel' in kwargs and kwargs['loglevel']:
             self.default_log_level = kwargs['loglevel']
 
         # If none specified then use platform specific default location

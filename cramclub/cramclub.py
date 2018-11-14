@@ -28,7 +28,7 @@ def get_args(argv):
     parser.add_argument('--version', action='version', version='%(prog)s 0.2')
     parser.add_argument(
         '--loglevel', '-l',
-        help='[CRITICAL,ERROR,WARNING,INFO,DEBUG,NOTSET]', required=False)
+        help='[CRITICAL,ERROR,WARNING,INFO,DEBUG,NOTSET]', required=False, default='WARNING')
 
     subparsers = parser.add_subparsers(
         title='subcommands',
