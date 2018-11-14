@@ -36,6 +36,7 @@ def start():
             cramio.process_groups()
         # Wait a minute before checking again
         time.sleep(RETRY_TIME)
+    logger.log(70, 'Stopped')
 
 
 def stop():
