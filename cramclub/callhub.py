@@ -28,17 +28,64 @@ def sanitise_crm_contact(rocket_url, crm_contact):
     )
 
 
+def mark_duplicates(crm_contacts, ch_contacts, logger):
+    """Ensure crm_contacts have unique contact numbers."""
+
+    def standardise(country_code, region_code, phone_number):
+        """
+        I tried so hard to avoid having to write this.
+        Alas, inadequacies in the CallHub API forced it upon me.
+        This an approximation of the full algorithm they use internally
+        when creating a new contact.
+        """
+        phn = phone_number.replace(' ', '')
+        if len(phn) == 12 and phn[0:3] == (country_code + '0'): # 610?????????
+            phn = country_code + phn[3:]
+        if (len(phn) == 11 and phn[0:3] == (country_code + region_code)) or (
+                len(phn) == 11 and phn[0:3] == (country_code + '4')):
+            return phn  # 612???????? landline or 614????????  mobile number
+        if phn[0:1] == '0':
+            phn = phn[1:]
+        if len(phn) == 9 and phn[0:1] == '4': # 4????????  mobile number
+            return country_code + phn
+        if len(phn) == 9 and phn[0:1] == region_code:
+            phn = phn[1:]  # 2???????? landline
+        if len(phn) == 10 and phn[0:2] == country_code:
+            phn = phn[2:]  # 61???????? landline
+        if len(phn) == 9 and phn[0:1] == region_code: # 2????????
+            phn = phn[1:]
+        if len(phn) == 9 and phn[0:1] == '4': # 4????????  mobile number
+            phn = country_code + phn
+        if len(phn) == 8: # ???????? landline
+            phn = country_code + region_code + phn
+        return phn
+
+    count = 0
+    phone_numbers = [c['contact'] for c in ch_contacts]
+    for crm_contact in crm_contacts:
+        phone_number = standardise('61', '2', crm_contact['phone'])
+        duplicate = phone_number in phone_numbers
+        crm_contact['duplicate'] = duplicate
+        if duplicate:
+            count = count + 1
+            logger.debug('Duplicate phone number. CiviCRM contact %s. %s' % \
+                (crm_contact['contact_id'], crm_contact['phone']))
+        else:
+            phone_numbers.append(phone_number)
+    return count
+
+
 def missing_callhub_contacts(ch_contacts, crm_contacts, crm_ch_id_map):
     """Gather CallHub contacts not found in CiviCRM id map."""
-    missing = []
     if not ch_contacts:
-        return missing
+        return ([], [])
 
+    missing = []
     existing = []
     for crm_contact in crm_contacts:
-        contact_id = crm_contact.get('contact_id', None)
-        if contact_id:
-            existing.append(crm_ch_id_map[contact_id])
+        ch_id = crm_ch_id_map.get(crm_contact.get('contact_id'))
+        if ch_id:
+            existing.append(ch_id)
 
     remainder = []
     for ch_contact in ch_contacts:
@@ -55,6 +102,7 @@ def gather_callhub_ids(id_map, callhub_contacts):
     """Examine CallHub contact details for CiviCRM id."""
     for callhub_contact in callhub_contacts:
         if (CUSTOM_FIELDS in callhub_contact and
+                callhub_contact[CUSTOM_FIELDS] and
                 CUSTOM_FIELD_CONTACTID in callhub_contact[CUSTOM_FIELDS]):
             # Gather the contact id
             custom_fields = json.loads(
@@ -75,9 +123,12 @@ def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     # Another O(N) operation dodged with dict lookup.
     missing, existing = ([], []) # This is the return value
     for crm_contact in crm_contacts:
-        contact_id = crm_contact.get('contact_id')
-        if contact_id:
-            existing.append(crm_ch_id_map[contact_id])
+        if crm_contact['duplicate']:
+            continue
+
+        ch_id = crm_ch_id_map.get(crm_contact.get('contact_id'))
+        if ch_id:
+            existing.append(ch_id)
         else:
             missing.append(crm_contact)
     return (missing, existing)
@@ -318,8 +369,10 @@ class CallHub(object):
 
     def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
         """Create all contacts and add them to phonebook"""
-        # Remove contacts not in the crm_contacts list
         ch_contacts = self.phonebook_get_contacts(phonebook_id)
+        dup_count = mark_duplicates(crm_contacts, ch_contacts, self.logger)
+
+        # Remove contacts not in the crm_contacts list
         missing_callhub, remaining = missing_callhub_contacts(
             ch_contacts=ch_contacts,
             crm_contacts=crm_contacts,
@@ -329,12 +382,13 @@ class CallHub(object):
             clear_content = self.phonebook_clear(
                 phonebook_id=phonebook_id,
                 contact_ids=missing_callhub)
-            assert int(clear_content['count']) == len(ch_contacts) - len(missing_callhub)
+            self.logger.debug('Removed %d contacts from phonebook: %s. %d/%d remaining.' % \
+                (len(missing_callhub), phonebook_id, int(clear_content['count']), len(ch_contacts)))
 
         # Identify new CRM contacts.
-        ## Note: existing is a list of CallHub ids.
+        ## Note: `existing` is a list of CallHub ids.
         missing, existing = missing_crm_contacts(crm_contacts, crm_ch_id_map)
-        assert len(missing) + len(existing) == len(crm_contacts)
+        assert len(missing) + len(existing) == len(crm_contacts) - dup_count
 
         # Skip adding contacts that are already in the phonebook.
         for ch_contact in ch_contacts:
@@ -350,6 +404,9 @@ class CallHub(object):
             if not crm_contact['phone']:
                 self.logger.warn('Missing phone number: %s' % \
                     sanitise_crm_contact(self.rocket_url, crm_contact))
+                continue
+
+            if crm_contact['duplicate']:
                 continue
 
             ch_contact = self.make_callhub_contact_from(crm_contact)
@@ -372,8 +429,8 @@ class CallHub(object):
         result = self.phonebook_add_existing(
             phonebook_id=phonebook_id, ch_contact_ids=existing)
         if result.get('count') == '+1': # Special value to indicate failure.
-            self.logger.warn('CallHub.phonebook_update():' + \
-            'Failed to add to phonebook %s: %s' % (
-                phonebook_id, result.get('error', 'no error message')))
+            self.logger.warn('CallHub.phonebook_update(): ' + \
+                'Failed to add to phonebook %s: %s' % (
+                    phonebook_id, result.get('error', 'no error message')))
         else:
             assert int(result.get('count', '-1')) >= len(existing)
