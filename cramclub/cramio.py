@@ -31,10 +31,12 @@ class CramIo(object):
         """Check the time to start processing"""
         when = time.strptime(self.cram.cfg['runat'], '%H:%M')
         now = time.localtime()
-        start = (now.tm_hour == when.tm_hour and
-                 now.tm_min == when.tm_min or (
-                     'instance' in self.cram.cfg and
-                     self.cram.cfg['instance'] == 'test'))
+        start = (
+            now.tm_hour == when.tm_hour and
+            now.tm_min == when.tm_min or (
+                'instance' in self.cram.cfg and
+                self.cram.cfg['instance'] == 'test')
+        )
         return start
 
 
@@ -44,7 +46,10 @@ class CramIo(object):
 
 
     def get_contact_ids_map(self):
-        """Use the engine's configuration determine where to gather the contact list from."""
+        """
+        Use the engine's configuration to determine where to gather
+        the CallHub <=> CiviCRM id map from.
+        """
         has_cache_cfg = 'csv_cache' in self.cram.cfg
 
         create_cache = has_cache_cfg and \
@@ -52,8 +57,8 @@ class CramIo(object):
             self.cram.cfg['csv_cache']['create']
 
         only_create_cache = create_cache and \
-                'only' in self.cram.cfg['csv_cache'] and \
-                self.cram.cfg['csv_cache']['only']
+            'only' in self.cram.cfg['csv_cache'] and \
+            self.cram.cfg['csv_cache']['only']
 
         use_cache = has_cache_cfg and \
             'use' in self.cram.cfg['csv_cache'] and \
@@ -99,8 +104,7 @@ class CramIo(object):
         Pull the contact list for the group from CiviCRM,
         then update corresponding CallHub phonebook.
         """
-        self.logger.debug('{crm: "%s", ch: "%s"}' %
-                          (crm_group_id, phonebook_id))
+        self.logger.debug('{crm: "%s", ch: "%s"}' % (crm_group_id, phonebook_id))
         crm_contacts = self.crmpull.group(crm_group_id)
         if crm_contacts:
             self.club.phonebook_update(
