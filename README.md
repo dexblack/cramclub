@@ -10,6 +10,9 @@ Configuration location is either:
 Linux:  $XDG_CONFIG_HOME default /etc/cramclub/
 windows: $PROGRAMDATA/cramclub/
 
+Alternatively you can define `CRAMCLUB_CFG_DIR` in the environment and override the default loation.
+
+
 Configuration files:
 
 ### Usage
