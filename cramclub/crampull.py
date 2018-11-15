@@ -1,7 +1,7 @@
 """
 Retrieve CiviCRM group contact list data.
 """
-from requests.exceptions import ReadTimeout
+from requests.exceptions import ReadTimeout, ConnectionError
 from singleton.singleton import Singleton
 
 from civicrm.civicrm import CiviCRM
@@ -61,17 +61,23 @@ class CramPull(object):
     def group(self, group_id):
         """ Retrieve all contacts in a group. """
         contacts = []
-        try:
-            contacts = self._api.get(
-                'Contact',
-                group=[group_id],
-                limit=5000,
-                offset=0)
+        retry_count = 0
+        while retry_count < 3:
+            try:
+                contacts = self._api.get(
+                    'Contact',
+                    group=[group_id],
+                    limit=5000,
+                    offset=0)
 
-            self.logger.info('Contacts: {:d}'.format(len(contacts)))
-
-        except ReadTimeout as err:
-            self.logger.critical(err)
-            return None
+                self.logger.info('Contacts: {:d}'.format(len(contacts)))
+                break
+            except ReadTimeout as err:
+                self.logger.critical(str(err))
+                retry_count += 1
+            except ConnectionError as conn_err:
+                # ('Connection aborted.', ConnectionResetError(10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None))
+                self.logger.critical(str(conn_err))
+                retry_count += 1
 
         return contacts
