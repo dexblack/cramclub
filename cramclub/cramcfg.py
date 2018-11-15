@@ -19,46 +19,42 @@ class CramCfg(object):
         assert not args
         self.cfg = {
             'instance': (kwargs['instance'] if 'instance' in kwargs else None),
-            'dir': None,
+            'dir': os.getenv('CRAMCLUB_CFG_DIR'),
             'callhub': {},
             'civicrm': {},
-            'timeout': 0,
-            'runat': None,
+            'rocket': {},
+            'timeout': 20,
+            'runat': "03:00",
             'stop_file_path': None
             }
 
         # Override platform dependent configuration location.
-        if 'CRAMCLUB_CFG_DIR' in os.environ:
-            self.cfg['dir'] = PurePath(os.environ['CRAMCLUB_CFG_DIR'])
-
-        if not self.cfg['dir']:
+        if self.cfg['dir']:
+            self.cfg['dir'] = PurePath(self.cfg['dir'])
+        else:
             if platform.system() == 'Linux':
                 xdg_cfg_home = os.environ['XDG_CONFIG_HOME']
                 xdg_home = PurePath(xdg_cfg_home if xdg_cfg_home else '/etc')
                 self.cfg['dir'] = xdg_home / APP_NAME
             elif platform.system() == 'Windows':
-                self.cfg['dir'] = PurePath(os.environ['PROGRAMDATA']) / APP_NAME
-
-        if not self.cfg['dir']:
-            raise RuntimeError('CramCfg: Unsupported platform: ' + platform.system())
+                self.cfg['dir'] = PurePath(os.getenv('PROGRAMDATA')) / APP_NAME
+            else:
+                raise RuntimeError('CramCfg: Unsupported platform: ' + platform.system())
 
         self.logger.info('Configuration directory: ' + self.cfg['dir'].as_posix())
 
-        self.cfg['csv_file_path'] = (self.cfg['dir'] / (
-            APP_NAME + dot_or_nothing(self.cfg['instance']) + '.csv')).as_posix()
-
-        self.cfg['stop_file_path'] = (self.cfg['dir'] / (
-            APP_NAME + dot_or_nothing(self.cfg['instance']) + '.stop')).as_posix()
+        instance = dot_or_nothing(self.cfg['instance'])
+        self.cfg['csv_file_path'] = (self.cfg['dir'] / (APP_NAME + instance + '.csv')).as_posix()
+        self.cfg['stop_file_path'] = (self.cfg['dir'] / (APP_NAME + instance + '.stop')).as_posix()
         self.logger.log(70, 'Stop file path: ' + self.cfg['stop_file_path'])
 
-        self.defaults_path = self.cfg['dir'] / (
-            'defaults' + dot_or_nothing(self.cfg['instance']) + '.yaml')
-
+        self.defaults_path = self.cfg['dir'] / ('defaults' + instance + '.yaml')
         self.logger.log(70, 'Default configuration: ' + self.defaults_path.as_posix())
+
         if os.path.exists(self.cfg['dir']):
             # Build the correct configuration file name for this instance.
             self.cfg_path = self.cfg['dir'] / (
-                APP_NAME + dot_or_nothing(self.cfg['instance']) + '.yaml')
+                APP_NAME + instance + '.yaml')
 
             self.logger.log(70, 'Configuration file path: ' + self.cfg_path.as_posix())
 
@@ -79,56 +75,64 @@ class CramCfg(object):
             raise RuntimeError('Missing configuration file: ' + self.cfg_path.as_posix())
 
         # Environment values override configuration values
-        if 'CIVICRM_SITE_KEY' in os.environ:
-            self.cfg['civicrm']['site_key'] = os.environ['CIVICRM_SITE_KEY']
+        def override_with_env(cfg, name, subkey=None):
+            env_name = name.upper()
+            if not subkey:
+                env_name = 'CRAMCLUB_%s' % env_name
+            env_var = "%s%s" % (env_name, '_' + subkey.upper() if subkey else '')
+            env_val = os.getenv(env_var)
+            if env_val:
+                if subkey:
+                    cfg[name][subkey] = env_val
+                else:
+                    cfg[name] = env_val
 
-        if 'CIVICRM_API_KEY' in os.environ:
-            self.cfg['civicrm']['api_key'] = os.environ['CIVICRM_API_KEY']
+        override_with_env(self.cfg, name='civicrm', subkey='site_key')
+        override_with_env(self.cfg, name='civicrm', subkey='api_key')
+        override_with_env(self.cfg, name='callhub', subkey='api_key')
+        override_with_env(self.cfg, name='runat') # CRAMCLUB_RUNAT
 
-        if 'CALLHUB_API_KEY' in os.environ:
-            self.cfg['callhub']['api_key'] = os.environ['CALLHUB_API_KEY']
+        def trim_slash(url):
+            """Remove trailing slash from URLs"""
+            return url[0:-1] if url[-1:] == '/' else url
 
-        if 'CRAMCLUB_RUNAT' in os.environ:
-            self.cfg['runat'] = os.environ['CRAMCLUB_RUNAT']
+        assert 'url' in self.cfg['civicrm']
+        self.cfg['civicrm']['url'] = trim_slash(self.cfg['civicrm']['url'])
 
-        # Remove trailing slash from URLs
-        assert 'civicrm' in self.cfg and 'url' in self.cfg['civicrm']
-        if self.cfg['civicrm']['url'][-1:] == '/':
-            self.cfg['civicrm']['url'] = self.cfg['civicrm']['url'][0:-1]
-
-        assert 'callhub' in self.cfg and 'url' in self.cfg['callhub']
-        if self.cfg['callhub']['url'][-1:] == '/':
-            self.cfg['callhub']['url'] = self.cfg['callhub']['url'][0:-1]
+        assert 'url' in self.cfg['callhub']
+        self.cfg['callhub']['url'] = trim_slash(self.cfg['callhub']['url'])
 
         assert 'rocket' in self.cfg and 'url' in self.cfg['rocket']
-        if self.cfg['rocket']['url'][-1:] == '/':
-            self.cfg['rocket']['url'] = self.cfg['rocket']['url'][0:-1]
+        self.cfg['rocket']['url'] = trim_slash(self.cfg['rocket']['url'])
 
-        #self.logger.info(self.cfg)
+
+    def arg_or_cfg(self, from_args, name=None, subkey=None):
+        """
+        Update self.cfg using from_args and cope with the None value properly.
+        Uses `name` or `name_subkey` as attribute name for from_args.
+        NB: Handles the special case where name == section and no key.
+        """
+        arg = getattr(from_args, '%s%s' % (name, '_' + subkey if subkey else ''), None)
+        if arg:
+            if subkey:
+                self.cfg[name][subkey] = arg
+            elif not subkey:
+                self.cfg[name] = arg
 
 
     def update(self, from_args):
         """Command line arguments override everything"""
-        if 'civicrm_site_key' in from_args and from_args.civicrm_site_key:
-            self.cfg['civicrm']['site_key'] = from_args.civicrm_site_key
 
-        if 'civicrm_api_key' in from_args and from_args.civicrm_api_key:
-            self.cfg['civicrm']['api_key'] = from_args.civicrm_api_key
-
-        if 'callhub_api_key' in from_args and from_args.callhub_api_key:
-            self.cfg['callhub']['api_key'] = from_args.callhub_api_key
-
-        if 'timeout' in from_args and from_args.timeout:
-            self.cfg['timeout'] = from_args.timeout
-
-        if 'runat' in from_args and from_args.runat:
-            self.cfg['runat'] = from_args.runat
+        self.arg_or_cfg(from_args, 'civicrm', 'site_key')
+        self.arg_or_cfg(from_args, 'civicrm', 'api_key')
+        self.arg_or_cfg(from_args, 'callhub', 'api_key')
+        self.arg_or_cfg(from_args, 'timeout')
+        self.arg_or_cfg(from_args, 'runat')
 
         # A simple check to validate the configuration was not copied
         # by mistake and used for the wrong purpose.
         # Internal 'instance' identifier must match the command line.
-        self.logger.info('Instance command line: "' + from_args.instance + '"')
+        self.logger.debug('Instance command line: "%s"' % from_args.instance)
         inst = self.cfg['instance']
-        self.logger.info('Instance configuration: ' +
-                         ('"' + inst + '"' if inst else 'null'))
-        assert from_args.instance == self.cfg['instance']
+        self.logger.debug('Instance configuration: "%s"' % (inst or ''))
+        assert from_args.instance == inst
