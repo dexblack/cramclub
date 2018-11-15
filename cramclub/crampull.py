@@ -9,6 +9,7 @@ from cramcfg import CramCfg
 from cramlog import CramLog
 
 
+
 @Singleton
 class CramPull(object):
     """
@@ -25,6 +26,7 @@ class CramPull(object):
         cram = CramCfg.instance() # pylint: disable-msg=E1101
 
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
+        self.rocket_url = cram.cfg['rocket']['url']
         self._api = CiviCRM(
             url=cram.cfg['civicrm']['url'],
             site_key=cram.cfg['civicrm']['site_key'],
@@ -33,13 +35,21 @@ class CramPull(object):
             timeout=cram.cfg['timeout'])
 
 
+    def sanitise_crm_contact(self, crm_contact):
+        """Privacy protection for contact data in logs"""
+        return 'contact_id: %s, url: %s' % (
+            crm_contact['contact_id'],
+            '%s/%s' % (self.rocket_url, crm_contact['contact_id']),
+        )
+
+
     def contact(self, crm_id):
         """ Retrieve a single contact. """
         response = self._api.get('Contact', id=crm_id)
         contact = {}
         if response:
             contact = response[0]
-            #self.logger.debug('Contact: {:s}'.format(str(contact)))
+            #self.logger.debug('Contact: {:s}'.format(self.sanitise_crm_contact(contact)))
             fields = self._api.get('CustomValue', entity_id=crm_id)
             #self.logger.debug('Custom data: {:s}'.format(str(fields)))
             contact['custom'] = {}
