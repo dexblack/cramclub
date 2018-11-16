@@ -389,7 +389,7 @@ class CallHub(object):
                 'count': '+1',
                 'error': sanitised_error
                 }
-            self.logger.log(80, 'KILL THIS LINE %s' % response.text)
+            #self.logger.log(80, 'KILL THIS LINE %s' % response.text)
 
         return content
 
