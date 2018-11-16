@@ -1,0 +1,26 @@
+instance: test  # This value must match the command line "--instance name"
+
+civicrm:
+    url: use cramclub.defaults.yaml
+    site_key: use cramclub.defaults.yaml
+    api_key: use cramclub.defaults.yaml
+ 
+callhub:
+    url: https://api.callhub.io/v1
+    api_key: use cramclub.defaults.yaml
+    test_api_key: use cramclub.defaults.yaml
+
+rocket:
+    url: use cramclub.defaults.yaml
+
+timeout: 10
+
+runat: "21:08"  # 24h time format e.g. 23:30
+
+csv_cache:
+    use: True
+    only: False
+    create: False
+
+groups:
+ - { crm: "?", ch: "?" }
