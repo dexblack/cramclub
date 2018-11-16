@@ -77,7 +77,7 @@ class CramPull(object):
                 if retry_count == 2:
                     self.logger.critical(str(err))
                 else:
-                    self.logger.warn(str(err) + ' Retrying...' + str(retry_count))
+                    self.logger.warn('%s. Retrying... %d' % (str(err), str(retry_count)))
                 retry_count += 1
 
             except ConnectionError as conn_err:
@@ -86,7 +86,7 @@ class CramPull(object):
                 if retry_count == 2:
                     self.logger.critical(str(conn_err))
                 else:
-                    self.logger.warn(str(conn_err) + ' Retrying... ' + str(retry_count))
+                    self.logger.warn('%s. Retrying... %d' % (str(conn_err), str(retry_count)))
                 retry_count += 1
 
         return contacts
