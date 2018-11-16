@@ -87,7 +87,7 @@ class CramIo(object):
 
         if use_cache:
             # Read CSV output of the generated crm ch id mapping.
-            self.logger.info('Using CSV cache file: "%s"' % csv_file_path)
+            self.logger.log(70, 'Using CSV cache file: "%s"' % csv_file_path)
             if not os.path.exists(csv_file_path):
                 self.logger.critical('CSV file missing: %s' % csv_file_path)
                 return
