@@ -1,6 +1,7 @@
 """
 Wrapper for CallHub operations.
 """
+import re
 import json
 from requests import get, post, put, delete, exceptions
 from singleton.singleton import Singleton
@@ -16,7 +17,7 @@ def sanitised_callhub_contact(ch_contact):
     return 'id: %s, url: %s, custom: %s' % (
         ch_contact.get('pk_str', ''),
         ch_contact.get('url', ''),
-        ch_contact['custom_fields'].replace(CUSTOM_FIELD_CONTACTID, 'ContactID')
+        ch_contact[CUSTOM_FIELDS].replace(CUSTOM_FIELD_CONTACTID, 'ContactID')
     )
 
 
@@ -214,7 +215,9 @@ class CallHub(object):
                 self.logger.warn(response2.get('detail', 'no error detail provided'))
                 content = response2.get('contact', {})
         else:
-            self.logger.error('Create Contact failed: HTTP Error %d' % response.status_code)
+            self.logger.error('Create Contact %s failed: HTTP Error %d' % (
+                ch_contact.get(CUSTOM_FIELDS).replace(CUSTOM_FIELD_CONTACTID, 'ContactID'),
+                response.status_code))
         return content
 
 
@@ -364,7 +367,8 @@ class CallHub(object):
                 (phonebook_id, str(ch_contact_ids)))
             content = response.json()
         else:
-            self.logger.error(response.text)
+            sanitised_error = re.sub("Phonenumber:'([0-9][0-9][0-9])[0-9]+'", \
+                r"Phonenumber:'\1????????'", response.text)
             content = {
                 'url': '%s/phonebooks/%s/' % (self.url, phonebook_id),
                 'id': int(phonebook_id),
@@ -372,7 +376,7 @@ class CallHub(object):
                 'name': '',
                 'description': '',
                 'count': '+1',
-                'error': response.text
+                'error': sanitised_error
                 }
         return content
 
