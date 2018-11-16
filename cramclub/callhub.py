@@ -253,13 +253,13 @@ class CallHub(object):
 
                 response_content = get_response.json()
                 next_page = response_content['next']
-                page = page + 1
+                page += 1
                 gather_callhub_ids(
                     id_map=crm_ch_id_map,
                     callhub_contacts=response_content['results'])
 
-        except exceptions.ConnectionError as err:
-            self.logger.error(str(err))
+        except exceptions.ConnectionError as conn_err:
+            self.logger.error(str(conn_err))
 
         return crm_ch_id_map
 
@@ -277,7 +277,18 @@ class CallHub(object):
         contacts = []
         next_url = '%s/phonebooks/%s/contacts/' % (self.url, phonebook_id)
         while next_url:
-            response = get(url=next_url, headers=self.headers)
+            retry_count = 0
+            while retry_count < 3:
+                try:
+                    response = get(url=next_url, headers=self.headers)
+                    break
+                except ConnectionError as conn_err:
+                    if retry_count < 3:
+                        self.logger.warn('%s. Retrying... %d' % (str(conn_err), retry_count))
+                    else:
+                        self.logger.error(str(conn_err))
+                    retry_count += 1
+
             if response.ok:
                 content = response.json()
                 contacts.extend(content['results'])
@@ -378,6 +389,8 @@ class CallHub(object):
                 'count': '+1',
                 'error': sanitised_error
                 }
+            self.logger.log(80, 'KILL THIS LINE %s' % response.text)
+
         return content
 
 
@@ -442,7 +455,7 @@ class CallHub(object):
         result = self.phonebook_add_existing(
             phonebook_id=phonebook_id, ch_contact_ids=existing)
         if result.get('count') == '+1': # Special value to indicate failure.
-            self.logger.warn('CallHub.phonebook_update(): ' + \
+            self.logger.error('CallHub.phonebook_update(): ' + \
                 'Failed to add to phonebook %s: %s' % (
                     phonebook_id, result.get('error', 'no error message')))
         else:
