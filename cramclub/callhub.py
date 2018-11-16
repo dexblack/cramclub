@@ -22,7 +22,7 @@ def sanitised_callhub_contact(ch_contact):
 
 def sanitise_crm_contact(rocket_url, crm_contact):
     """Privacy protection for contact data in logs"""
-    return 'contact_id: %s, url: %s' % (
+    return 'crm_id: %s, url: %s' % (
         crm_contact['contact_id'],
         '%s/%s' % (rocket_url, crm_contact['contact_id']),
     )
@@ -59,17 +59,27 @@ def mark_duplicates(crm_contacts, ch_contacts, logger):
         if len(phn) == 8: # ???????? landline
             phn = country_code + region_code + phn
         return phn
-
     count = 0
     phone_numbers = [c['contact'] for c in ch_contacts]
+    # Collect CiviCRM ContactID fields from existing contacts in the phone-book.
+    get_contact_id = lambda c: json.loads(
+        c[CUSTOM_FIELDS].replace("'", '"').replace('u"', '"')).get(CUSTOM_FIELD_CONTACTID)
+    crm_ids = [get_contact_id(c) for c in ch_contacts if CUSTOM_FIELDS in c]
+
     for crm_contact in crm_contacts:
+        # Don't count contacts already in the phone-book as duplicates.
+        # Also skip empty phone numbers.
+        if crm_contact['contact_id'] in crm_ids:
+            continue
         phone_number = standardise('61', '2', crm_contact['phone'])
+        if not phone_number:
+            continue
         duplicate = phone_number in phone_numbers
         crm_contact['duplicate'] = duplicate
         if duplicate:
             count = count + 1
-            logger.debug('Duplicate phone number. CiviCRM contact %s. %s' % \
-                (crm_contact['contact_id'], crm_contact['phone']))
+            logger.debug('Duplicate phone number. CiviCRM contact %s.' % \
+                crm_contact['contact_id'])
         else:
             phone_numbers.append(phone_number)
     return count
@@ -120,10 +130,10 @@ def missing_crm_contacts(crm_contacts, crm_ch_id_map):
     Return a new list CRM contacts missing from CallHub,
     and the CallHub ids of the existing CallHub entries.
     """
-    # Another O(N) operation dodged with dict lookup.
+    # Another O(NxN) operation dodged with dict lookup.
     missing, existing = ([], []) # This is the return value
     for crm_contact in crm_contacts:
-        if crm_contact['duplicate']:
+        if crm_contact.get('duplicate'):
             continue
 
         ch_id = crm_ch_id_map.get(crm_contact.get('contact_id'))
@@ -196,9 +206,9 @@ class CallHub(object):
             non_field_errors = response2.get('non_field_errors')
             email_error = response2.get('email')
             if non_field_errors:
-                self.logger.error(str(non_field_errors))
+                self.logger.warn(str(non_field_errors))
             elif email_error:
-                self.logger.error(str(email_error))
+                self.logger.warn(str(email_error))
             else:
                 # Contact already existed. Returns the one found.
                 self.logger.warn(response2.get('detail', 'no error detail provided'))
@@ -388,7 +398,6 @@ class CallHub(object):
         # Identify new CRM contacts.
         ## Note: `existing` is a list of CallHub ids.
         missing, existing = missing_crm_contacts(crm_contacts, crm_ch_id_map)
-        assert len(missing) + len(existing) == len(crm_contacts) - dup_count
 
         # Skip adding contacts that are already in the phonebook.
         for ch_contact in ch_contacts:
