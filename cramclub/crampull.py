@@ -74,19 +74,19 @@ class CramPull(object):
                 break
 
             except ReadTimeout as err:
-                if retry_count == 2:
-                    self.logger.critical(str(err))
-                else:
+                if retry_count < 3:
                     self.logger.warn('%s. Retrying... %d' % (str(err), str(retry_count)))
+                else:
+                    self.logger.critical(str(err))
                 retry_count += 1
 
             except ConnectionError as conn_err:
                 # 'Connection aborted.', ConnectionResetError
                 # 10054, 'An existing connection was forcibly closed by the remote host', None, 10054, None
-                if retry_count == 2:
-                    self.logger.critical(str(conn_err))
-                else:
+                if retry_count < 3:
                     self.logger.warn('%s. Retrying... %d' % (str(conn_err), str(retry_count)))
+                else:
+                    self.logger.critical(str(conn_err))
                 retry_count += 1
 
         return contacts
