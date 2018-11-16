@@ -104,7 +104,7 @@ class CramIo(object):
         Pull the contact list for the group from CiviCRM,
         then update corresponding CallHub phonebook.
         """
-        self.logger.debug('{crm: "%s", ch: "%s"}' % (crm_group_id, phonebook_id))
+        self.logger.debug('{crm: "%s", ch: "%s"} CRM group and phone-book' % (crm_group_id, phonebook_id))
         crm_contacts = self.crmpull.group(crm_group_id)
         if crm_contacts:
             self.club.phonebook_update(
