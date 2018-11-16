@@ -61,7 +61,7 @@ class CramCfg(object):
         if os.path.exists(self.defaults_path.as_posix()):
             with open(self.defaults_path.as_posix()) as stream:
                 try:
-                    self.cfg = yaml.load(stream)
+                    self.cfg.update(yaml.load(stream))
                 except yaml.YAMLError as err:
                     self.logger.critical(str(err))
 
