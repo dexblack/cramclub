@@ -74,12 +74,17 @@ class CramCfg(object):
         else:
             raise RuntimeError('Missing configuration file: ' + self.cfg_path.as_posix())
 
-        # Environment values override configuration values
         def override_with_env(cfg, name, subkey=None):
-            env_name = name.upper()
-            if not subkey:
-                env_name = 'CRAMCLUB_%s' % env_name
-            env_var = "%s%s" % (env_name, '_' + subkey.upper() if subkey else '')
+            '''
+            Environment values override configuration values.
+            Value names are constructed
+            i.e. app name prefixed, uppercased and underscore separated.
+            Assignment is to either name or name+subkey depending.
+            '''
+            env_var = '%s_%s%s' % (
+                APP_NAME,
+                name.upper(),
+                ('_' + subkey.upper()) if subkey else '')
             env_val = os.getenv(env_var)
             if env_val:
                 if subkey:
@@ -87,9 +92,9 @@ class CramCfg(object):
                 else:
                     cfg[name] = env_val
 
-        override_with_env(self.cfg, name='civicrm', subkey='site_key')
-        override_with_env(self.cfg, name='civicrm', subkey='api_key')
-        override_with_env(self.cfg, name='callhub', subkey='api_key')
+        override_with_env(self.cfg, name='civicrm', subkey='site_key') # CRAMCLUB_CIVICRM_SITE_KEY
+        override_with_env(self.cfg, name='civicrm', subkey='api_key') # CRAMCLUB_CIVICRM_API_KEY
+        override_with_env(self.cfg, name='callhub', subkey='api_key') # CRAMCLUB_CALLHUB_API_KEY
         override_with_env(self.cfg, name='runat') # CRAMCLUB_RUNAT
 
         def trim_slash(url):
