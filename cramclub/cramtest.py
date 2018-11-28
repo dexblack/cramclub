@@ -1,9 +1,83 @@
 """
 Testing the various Web API behaviour.
 """
+from base64 import b64decode, b64encode
+from Crypto.Cipher import AES
+from Crypto.Util.Padding import pad
+from Crypto.Protocol.KDF import PBKDF2
+from Crypto.Random import get_random_bytes
+
 from cramlog import CramLog
 from callhub import CallHub
 from crampull import CramPull
+
+
+def test_secure_config():
+    '''
+    Pretend the configuration was read from disk.
+    The `iv` value is a random string of 32 bytes encoded as bas64.
+    '''
+    cfg = {
+        'instance': 'prod',
+        'dir': None,
+        'passphrase': None,
+        'iv': b64encode(get_random_bytes(32)),
+        'callhub': {
+            'api_key': '937c82bbb41ce8d7fa898fb57da0dc29c518676b'
+        },
+        'civicrm': {
+            'api_key': 'tPX3X8FqZWJsNZ2Q',
+            'site_key': 'c4GmfI7MccoqJFgAFrqPa9y1HnFeKpte'
+        },
+        'rocket': {'url': 'https://contact-nsw.greens.org.au/agc/ems8#!/contact'},
+        'timeout': 20,
+        'runat': "03:00",
+        'stop_file_path': None
+    }
+    # pretend the code receives the passphrase from the command line.
+    cfg.update({
+        'passphrase': 'Some long sentence you remember easily',
+        })
+
+    def encipher(cfg, key, subkey):
+        '''
+        Use AES CBC mode to encrypt the value.
+        '''
+        result = None
+        value = cfg[key][subkey].encode() # UTF-8 byte sequence
+        passphrase = cfg['passphrase']
+        initial_val = b64decode(cfg['iv'])
+        try:
+            secure_key = PBKDF2(password=passphrase, salt=initial_val, dkLen=32)
+            crypter = AES.new(key=secure_key, mode=AES.MODE_CBC, iv=initial_val[0:16])
+            result = crypter.encrypt(value)
+        except ValueError as err:
+            print(err)
+        return result
+
+    def decipher(cfg, key, subkey):
+        ''' Decrypt the cfg[key][subkey] value '''
+        result = None
+        value = b64decode(cfg[key][subkey])
+        passphrase = cfg['passphrase']
+        initial_val = b64decode(cfg['iv'])
+        # Create 32 byte key value for AES-256s
+        try:
+            secure_key = PBKDF2(password=passphrase, salt=initial_val, dkLen=32)
+            crypter = AES.new(key=secure_key, mode=AES.MODE_CBC, iv=initial_val[0:16])
+            result = crypter.decrypt(value)
+        except ValueError as err:
+            print(err)
+        return result
+
+    values = [
+        ('civicrm', 'api_key'),
+        ('civicrm', 'site_key'),
+        ('callhub', 'api_key'),
+    ]
+    for (key, subkey) in values:
+        cfg[key][subkey] = b64encode(encipher(cfg, key, subkey))
+        print(decipher(cfg, key, subkey))
 
 
 def test_add_contact_to_callhub():

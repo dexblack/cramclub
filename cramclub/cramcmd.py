@@ -15,7 +15,8 @@ def test():
     """
     Various tests to verify Web API behaviors.
     """
-    cramtest.test_add_contact_to_callhub()
+    #cramtest.test_add_contact_to_callhub()
+    cramtest.test_secure_config()
 
 
 def start():

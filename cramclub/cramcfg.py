@@ -4,6 +4,8 @@ Configuration values.
 import os
 import platform
 from pathlib import PurePath
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
 import yaml
 from singleton.singleton import Singleton
 from cramlog import CramLog
@@ -20,6 +22,8 @@ class CramCfg(object):
         self.cfg = {
             'instance': (kwargs['instance'] if 'instance' in kwargs else None),
             'dir': os.getenv('CRAMCLUB_CFG_DIR'),
+            'passphrase': None,
+            'iv': None,
             'callhub': {},
             'civicrm': {},
             'rocket': {},
@@ -141,3 +145,5 @@ class CramCfg(object):
         inst = self.cfg['instance']
         self.logger.debug('Instance configuration: "%s"' % (inst or ''))
         assert from_args.instance == inst
+
+

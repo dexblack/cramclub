@@ -41,6 +41,10 @@ def get_args(argv):
         '--instance', '-i',
         help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
         required=True)
+    parser_start.add_argument(
+        '--passphrase', '-p',
+        help='Mandatory pass phrase to decrypt the various keys',
+        required=True)
     parser_start.add_argument('--civicrm_site_key', help='[env] CiviCRM Site key')
     parser_start.add_argument('--civicrm_api_key', help='[env] CiviCRM API key')
     parser_start.add_argument('--callhub_api_key', help='[env] CallHub API key')
