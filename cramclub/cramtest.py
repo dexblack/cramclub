@@ -4,7 +4,6 @@ Testing the various Web API behaviour.
 from getpass import getpass
 from base64 import b64decode, b64encode
 from Crypto.Cipher import AES
-from Crypto.Util.Padding import pad
 from Crypto.Protocol.KDF import PBKDF2
 from Crypto.Random import get_random_bytes
 
