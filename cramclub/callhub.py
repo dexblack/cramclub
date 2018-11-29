@@ -397,7 +397,7 @@ class CallHub(object):
     def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
         """Create all contacts and add them to phonebook"""
         ch_contacts = self.phonebook_get_contacts(phonebook_id)
-        dup_count = mark_duplicates(crm_contacts, ch_contacts, self.logger)
+        mark_duplicates(crm_contacts, ch_contacts, self.logger)
 
         # Remove contacts not in the crm_contacts list
         missing_callhub, remaining = missing_callhub_contacts(
