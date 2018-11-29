@@ -1,6 +1,7 @@
 """
 Testing the various Web API behaviour.
 """
+from getpass import getpass
 from base64 import b64decode, b64encode
 from Crypto.Cipher import AES
 from Crypto.Util.Padding import pad
@@ -10,6 +11,11 @@ from Crypto.Random import get_random_bytes
 from cramlog import CramLog
 from callhub import CallHub
 from crampull import CramPull
+
+
+def test_getpass():
+    passphrase = getpass(prompt='Please type the encryption pass phrase and press Enter:')
+    print(passphrase)
 
 
 def test_secure_config():
