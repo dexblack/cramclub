@@ -152,7 +152,7 @@ class CallHub(object):
     CallHub API wrapper.
     Implements limited required functionality.
     """
-    def __init__(self):
+    def __init__(self, crypter):
         """
         Set up configured URLs, API keys and field identifiers.
         """
@@ -162,8 +162,10 @@ class CallHub(object):
         self.rocket_url = cram.cfg['rocket']['url']
         self.crm_custom = cram.cfg['civicrm']['custom'] \
             if 'custom' in cram.cfg['civicrm'] else {}
+
+        authtoken = crypter.decrypt(cram.cfg['callhub']['api_key']).decode('ascii')
         self.headers = {
-            'Authorization': 'Token ' + cram.cfg['callhub']['api_key'],
+            'Authorization': 'Token ' + authtoken,
         }
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
 

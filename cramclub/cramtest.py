@@ -4,6 +4,18 @@ Testing the various Web API behaviour.
 from cramlog import CramLog
 from callhub import CallHub
 from crampull import CramPull
+from cramcrypt import CramCrypt
+
+
+def test_crypto():
+    """ Verify CramCrypt works as expected """
+    input = 'c4GmfI7MccoqJFgAFrqPa9y1HnFeKpte'
+    iv = b'\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0'
+    salt = b'\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0\0'
+    crypter = CramCrypt(iv, salt)
+    encrypted = crypter.encrypt(input)
+    decrypted = crypter.decrypt(encrypted)
+    assert decrypted == input
 
 
 def test_add_contact_to_callhub():

@@ -34,6 +34,15 @@ def get_args(argv):
         title='subcommands',
         description='valid sub-commands')
 
+    parser_secure = subparsers.add_parser(
+        'secure',
+        description='Rewrite configured API keys etc. using cryptographic tools.')
+    parser_secure.add_argument(
+        '--instance', '-i',
+        help='Which configuration to use; e.g. "INSTANCE" => cramclub.INSTANCE.yaml',
+        required=True)
+    parser_secure.set_defaults(cmd=cramcmd.secure)
+
     parser_start = subparsers.add_parser(
         'start',
         description='Execute the updater using the configured schedule')
@@ -48,7 +57,6 @@ def get_args(argv):
     parser_start.add_argument(
         '--runat', '-r',
         help='Time of day to run the job. [env] CRAMCLUB_RUNAT')
-
     parser_start.set_defaults(cmd=cramcmd.start)
 
     parser_stop = subparsers.add_parser(
@@ -88,7 +96,7 @@ def main(argv):
     """
     args = get_args(argv)
     CramLog.initialize(instance=args.instance, loglevel=args.loglevel) # pylint: disable-msg=E1101
-    CramCfg.initialize(instance=args.instance) # pylint: disable-msg=E1101
+    CramCfg.initialize(args.instance) # pylint: disable-msg=E1101
     config = CramCfg.instance() # pylint: disable-msg=E1101
     config.update(args)
 

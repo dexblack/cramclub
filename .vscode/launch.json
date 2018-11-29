@@ -12,6 +12,13 @@
             "args": ["--loglevel", "DEBUG", "start", "-i", "prod"]
         },
         {
+            "name": "Python: Secure",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/cramclub/cramclub.py",
+            "args": ["secure", "-i", "prod"]
+        },
+        {
             "name": "Python: Prod Stop",
             "type": "python",
             "request": "launch",
@@ -38,6 +45,13 @@
             "request": "launch",
             "program": "${workspaceFolder}/cramclub/cramclub.py",
             "args": ["test"]
+        },
+        {
+            "name": "Python: Help",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/cramclub/cramclub.py",
+            "args": ["--help"]
         },
         {
             "name": "Python: Current File",
