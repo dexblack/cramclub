@@ -14,6 +14,7 @@ from crampull import CramPull
 
 
 def test_getpass():
+    ''' Verify no-echo behaviour of getpass. '''
     passphrase = getpass(prompt='Please type the encryption pass phrase and press Enter:')
     print(passphrase)
 
