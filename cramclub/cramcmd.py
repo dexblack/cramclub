@@ -69,9 +69,9 @@ def start():
     cram.logger.log(70, 'Starting')
 
     if not cram.cfg['secured']:
-        cram.logger.critical('You must first run> python {0}{1}{0}.py secure'.format(
-            APP_NAME, os.sep))
-        raise RuntimeError('Insecure configuration found.')
+        cram.logger.critical('You must first run> python {0}{1}{0}.py secure -i {2}'.format(
+            APP_NAME, os.sep, cram.cfg['instance']))
+        return
 
     # Prompts the user for the pass phrase and configures encryption
     cramio = CramIo(
