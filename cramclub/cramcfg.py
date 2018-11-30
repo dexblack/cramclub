@@ -106,6 +106,7 @@ class CramCfg(object):
         self.logger.log(70, 'Stop file path: ' + self.cfg['stop_file_path'])
         self.logger.log(70, 'Default configuration: ' + self.paths.defaults)
         self.logger.log(70, 'Configuration file path: ' + self.paths.configuration)
+        self.logger.log(70, 'Groups file path: ' + self.paths.groups)
 
         if os.path.exists(self.paths.defaults):
             self.cfg.update(load_configuration(self.paths.defaults, self.logger))
