@@ -163,7 +163,7 @@ class CallHub(object):
         self.crm_custom = cram.cfg['civicrm']['custom'] \
             if 'custom' in cram.cfg['civicrm'] else {}
 
-        authtoken = crypter.decrypt(cram.cfg['callhub']['api_key']).decode('ascii')
+        authtoken = crypter.decrypt(cram.cfg['callhub']['api_key'])
         self.headers = {
             'Authorization': 'Token ' + authtoken,
         }
