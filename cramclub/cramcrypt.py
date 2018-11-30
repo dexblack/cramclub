@@ -34,6 +34,9 @@ class CramCrypt(object):
             self.logger.critical(err)
             raise RuntimeError('Failed to create cryptographic engine.')
 
+    def build_engine(self):
+        return AES.new(key=self.secure_key, mode=AES.MODE_CBC, iv=self.iv)
+
 
     def encrypt(self, value):
         '''
@@ -41,7 +44,7 @@ class CramCrypt(object):
         `value` is a UTF-8 string.
         Returns base64 encoded ascii string.
         '''
-        crypter = AES.new(key=self.secure_key, mode=AES.MODE_CBC, iv=self.iv)
+        crypter = self.build_engine()
 
         seq = value.encode()
         padded = pad(seq, 16)
@@ -56,7 +59,7 @@ class CramCrypt(object):
         `value` is a base64 encoded string or byte sequence.
         Returns decrypted value as UTF-8 string.
         '''
-        crypter = AES.new(key=self.secure_key, mode=AES.MODE_CBC, iv=self.iv)
+        crypter = self.build_engine()
 
         encrypted = b64decode(value.encode())
         padded = crypter.decrypt(encrypted)
