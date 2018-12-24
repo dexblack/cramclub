@@ -4,8 +4,6 @@ Configuration values.
 import os
 import platform
 from pathlib import PurePath
-from Crypto.Cipher import AES
-from Crypto.Protocol.KDF import PBKDF2
 import yaml
 from singleton.singleton import Singleton
 from cramlog import CramLog
@@ -23,7 +21,8 @@ def load_configuration(file, logger):
     return cfg
 
 
-def save_configuration(cfg, file, logger):
+def save_configuration(cfg, file):
+    """ Just dump the YAML as text. """
     with open(file, 'w') as stream:
         yaml.dump(cfg, stream, default_flow_style=False)
 
