@@ -1,12 +1,14 @@
 """
 Retrieve CiviCRM group contact list data.
 """
+from base64 import b64decode
 from requests.exceptions import ReadTimeout, ConnectionError
 from singleton.singleton import Singleton
 
 from civicrm.civicrm import CiviCRM
 from cramcfg import CramCfg
 from cramlog import CramLog
+from cramcrypt import CramCrypt
 
 
 
@@ -18,7 +20,7 @@ class CramPull(object):
     """
     _api = None
 
-    def __init__(self):
+    def __init__(self, crypter):
         """
         Set up logger and keys from config.
         Load CiviCRM instance.
@@ -27,10 +29,14 @@ class CramPull(object):
 
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self.rocket_url = cram.cfg['rocket']['url']
+
+        site_key = crypter.decrypt(cram.cfg['civicrm']['site_key'])
+        api_key = crypter.decrypt(cram.cfg['civicrm']['api_key'])
+
         self._api = CiviCRM(
             url=cram.cfg['civicrm']['url'],
-            site_key=cram.cfg['civicrm']['site_key'],
-            api_key=cram.cfg['civicrm']['api_key'],
+            site_key=site_key,
+            api_key=api_key,
             use_ssl=True,
             timeout=cram.cfg['timeout'])
 

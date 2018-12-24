@@ -16,14 +16,18 @@ class CramIo(object):
     """
     Core CiviCRM => CallHub processing operations.
     """
-    def __init__(self):
+    def __init__(self, crypter):
         """
         Uses logger, configuration, CiviCRM and CallHub wrappers.
         """
-        self.logger = CramLog.instance()  # pylint: disable-msg=E1102
-        self.cram = CramCfg.instance()  # pylint: disable-msg=E1102
-        self.crmpull = CramPull.instance()  # pylint: disable-msg=E1101
-        self.club = CallHub.instance()  # pylint: disable-msg=E1101
+        self.logger = CramLog.instance()
+        self.cram = CramCfg.instance()
+
+        CramPull.initialize(crypter)
+        self.crmpull = CramPull.instance()
+
+        CallHub.initialize(crypter)
+        self.club = CallHub.instance()
         self.crm_ch_id_map = {}
 
 

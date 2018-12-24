@@ -18,7 +18,7 @@ Configuration files:
 ### Usage
 	python cramclub.py --help
 
-	usage: cramclub.py [-h] [--version] [--loglevel {CRITICAL,ERROR,WARNING,INFO,DEBUG,NOTSET}] {start,stop,restart} ...
+	usage: cramclub.py [-h] [--version] [--loglevel {CRITICAL,ERROR,WARNING,INFO,DEBUG,NOTSET}] {secure,start,stop,restart} ...
 
 CiviCRM smart groups to CallHub phonebooks updater.
 
@@ -29,7 +29,12 @@ Optional arguments:
 subcommands:
   valid sub-commands
 
-  {start,stop,restart}
+  {secure,start,stop,restart}
+
+#### Securing
+Secure the updater's configuration files
+
+	cramclub.py secure -i INSTANCE
 
 #### Starting
 Execute the updater using the configured schedule

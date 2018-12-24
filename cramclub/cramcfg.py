@@ -4,22 +4,94 @@ Configuration values.
 import os
 import platform
 from pathlib import PurePath
+from Crypto.Cipher import AES
+from Crypto.Protocol.KDF import PBKDF2
 import yaml
 from singleton.singleton import Singleton
 from cramlog import CramLog
 from cramconst import APP_NAME, dot_or_nothing
 
 
+def load_configuration(file, logger):
+    """ Base reader/writer for YAML configuration file. """
+    cfg = {}
+    with open(file) as stream:
+        try:
+            cfg = yaml.load(stream)
+        except yaml.YAMLError as err:
+            logger.critical(str(err))
+    return cfg
+
+
+def save_configuration(cfg, file, logger):
+    with open(file, 'w') as stream:
+        yaml.dump(cfg, stream, default_flow_style=False)
+
+
+class CramPath(object):
+    """
+    Construct all the various required file paths.
+    """
+    _path = None # Configuration directory.
+    instance = None  # Name of the current running instance i.e. 'prod'.
+    csv = None # CSV file path.
+    groups = None # Group configuration file path.
+    stop = None # Stop file path.
+    defaults = None # Default values configuration file path.
+    configuration = None # Instance configuration file path.
+
+
+    def __init__(self, instance):
+        self.logger = CramLog.instance() # pylint: disable-msg=E1102
+        self.instance = instance
+        instance = dot_or_nothing(instance)
+
+        # Override platform dependent configuration location.
+        env_config_dir = os.getenv('CRAMCLUB_CFG_DIR')
+        if env_config_dir:
+            self._path = PurePath(env_config_dir)
+        else:
+            if platform.system() == 'Linux':
+                xdg_cfg_home = os.environ['XDG_CONFIG_HOME']
+                xdg_home = PurePath(xdg_cfg_home if xdg_cfg_home else '/etc')
+                self._path = xdg_home / APP_NAME
+            elif platform.system() == 'Windows':
+                self._path = PurePath(os.getenv('PROGRAMDATA')) / APP_NAME
+            else:
+                raise RuntimeError('CramPaths Unsupported platform: ' + platform.system())
+
+        self.logger.info('Configuration directory: ' + self._path.as_posix())
+
+        self.csv = (self._path / (APP_NAME + instance + '.csv')).as_posix()
+        self.stop = (self._path / (APP_NAME + instance + '.stop')).as_posix()
+        self.groups = (self._path / (APP_NAME + '.groups' + instance + '.yaml')).as_posix()
+
+        self.defaults = (self._path / ('defaults' + instance + '.yaml')).as_posix()
+
+        # Build the correct configuration file name for this instance.
+        self.configuration = (self._path / (APP_NAME + instance + '.yaml')).as_posix()
+
+
+
 @Singleton
 class CramCfg(object):
     """Singleton Configuration object."""
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, instance):
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
-        assert not args
+        self.paths = CramPath(instance)
+        self.secure_keys = [
+            ('civicrm', 'api_key'),
+            ('civicrm', 'site_key'),
+            ('callhub', 'api_key'),
+        ]
+
+
         self.cfg = {
-            'instance': (kwargs['instance'] if 'instance' in kwargs else None),
-            'dir': os.getenv('CRAMCLUB_CFG_DIR'),
+            'instance': self.paths.instance,
+            'iv': None,
+            'salt': None,
+            'secured': False,
             'callhub': {},
             'civicrm': {},
             'rocket': {},
@@ -28,51 +100,24 @@ class CramCfg(object):
             'stop_file_path': None
             }
 
-        # Override platform dependent configuration location.
-        if self.cfg['dir']:
-            self.cfg['dir'] = PurePath(self.cfg['dir'])
-        else:
-            if platform.system() == 'Linux':
-                xdg_cfg_home = os.environ['XDG_CONFIG_HOME']
-                xdg_home = PurePath(xdg_cfg_home if xdg_cfg_home else '/etc')
-                self.cfg['dir'] = xdg_home / APP_NAME
-            elif platform.system() == 'Windows':
-                self.cfg['dir'] = PurePath(os.getenv('PROGRAMDATA')) / APP_NAME
-            else:
-                raise RuntimeError('CramCfg: Unsupported platform: ' + platform.system())
 
-        self.logger.info('Configuration directory: ' + self.cfg['dir'].as_posix())
-
-        instance = dot_or_nothing(self.cfg['instance'])
-        self.cfg['csv_file_path'] = (self.cfg['dir'] / (APP_NAME + instance + '.csv')).as_posix()
-        self.cfg['stop_file_path'] = (self.cfg['dir'] / (APP_NAME + instance + '.stop')).as_posix()
+        self.cfg['csv_file_path'] = self.paths.csv
+        self.cfg['stop_file_path'] = self.paths.stop
         self.logger.log(70, 'Stop file path: ' + self.cfg['stop_file_path'])
+        self.logger.log(70, 'Default configuration: ' + self.paths.defaults)
+        self.logger.log(70, 'Configuration file path: ' + self.paths.configuration)
+        self.logger.log(70, 'Groups file path: ' + self.paths.groups)
 
-        self.defaults_path = self.cfg['dir'] / ('defaults' + instance + '.yaml')
-        self.logger.log(70, 'Default configuration: ' + self.defaults_path.as_posix())
+        if os.path.exists(self.paths.defaults):
+            self.cfg.update(load_configuration(self.paths.defaults, self.logger))
 
-        if os.path.exists(self.cfg['dir']):
-            # Build the correct configuration file name for this instance.
-            self.cfg_path = self.cfg['dir'] / (
-                APP_NAME + instance + '.yaml')
+        if not os.path.exists(self.paths.configuration):
+            raise RuntimeError('Missing configuration file: ' + self.paths.configuration)
+        self.cfg.update(load_configuration(self.paths.configuration, self.logger))
 
-            self.logger.log(70, 'Configuration file path: ' + self.cfg_path.as_posix())
+        if os.path.exists(self.paths.groups):
+            self.cfg.update(load_configuration(self.paths.groups, self.logger))
 
-        if os.path.exists(self.defaults_path.as_posix()):
-            with open(self.defaults_path.as_posix()) as stream:
-                try:
-                    self.cfg.update(yaml.load(stream))
-                except yaml.YAMLError as err:
-                    self.logger.critical(str(err))
-
-        if os.path.exists(self.cfg_path.as_posix()):
-            with open(self.cfg_path.as_posix()) as stream:
-                try:
-                    self.cfg.update(yaml.load(stream))
-                except yaml.YAMLError as err:
-                    self.logger.critical(str(err))
-        else:
-            raise RuntimeError('Missing configuration file: ' + self.cfg_path.as_posix())
 
         def override_with_env(cfg, name, subkey=None):
             '''
@@ -121,7 +166,7 @@ class CramCfg(object):
         if arg:
             if subkey:
                 self.cfg[name][subkey] = arg
-            elif not subkey:
+            else:
                 self.cfg[name] = arg
 
 
@@ -138,6 +183,6 @@ class CramCfg(object):
         # by mistake and used for the wrong purpose.
         # Internal 'instance' identifier must match the command line.
         self.logger.debug('Instance command line: "%s"' % from_args.instance)
-        inst = self.cfg['instance']
-        self.logger.debug('Instance configuration: "%s"' % (inst or ''))
-        assert from_args.instance == inst
+        instance = self.cfg['instance']
+        self.logger.debug('Instance configuration: "%s"' % (instance or ''))
+        assert from_args.instance == instance

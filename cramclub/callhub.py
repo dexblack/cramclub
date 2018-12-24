@@ -152,7 +152,7 @@ class CallHub(object):
     CallHub API wrapper.
     Implements limited required functionality.
     """
-    def __init__(self):
+    def __init__(self, crypter):
         """
         Set up configured URLs, API keys and field identifiers.
         """
@@ -162,8 +162,10 @@ class CallHub(object):
         self.rocket_url = cram.cfg['rocket']['url']
         self.crm_custom = cram.cfg['civicrm']['custom'] \
             if 'custom' in cram.cfg['civicrm'] else {}
+
+        authtoken = crypter.decrypt(cram.cfg['callhub']['api_key'])
         self.headers = {
-            'Authorization': 'Token ' + cram.cfg['callhub']['api_key'],
+            'Authorization': 'Token ' + authtoken,
         }
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
 
@@ -397,7 +399,7 @@ class CallHub(object):
     def phonebook_update(self, phonebook_id, crm_contacts, crm_ch_id_map):
         """Create all contacts and add them to phonebook"""
         ch_contacts = self.phonebook_get_contacts(phonebook_id)
-        dup_count = mark_duplicates(crm_contacts, ch_contacts, self.logger)
+        mark_duplicates(crm_contacts, ch_contacts, self.logger)
 
         # Remove contacts not in the crm_contacts list
         missing_callhub, remaining = missing_callhub_contacts(
