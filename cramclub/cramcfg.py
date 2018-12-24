@@ -27,11 +27,10 @@ def save_configuration(cfg, file):
         yaml.dump(cfg, stream, default_flow_style=False)
 
 
-class CramPath(object):
+class CramPath():
     """
     Construct all the various required file paths.
     """
-    _path = None # Configuration directory.
     instance = None  # Name of the current running instance i.e. 'prod'.
     csv = None # CSV file path.
     groups = None # Group configuration file path.
@@ -41,6 +40,7 @@ class CramPath(object):
 
 
     def __init__(self, instance):
+        groot = None # Configuration directory.
         self.logger = CramLog.instance() # pylint: disable-msg=E1102
         self.instance = instance
         instance = dot_or_nothing(instance)
@@ -48,27 +48,27 @@ class CramPath(object):
         # Override platform dependent configuration location.
         env_config_dir = os.getenv('CRAMCLUB_CFG_DIR')
         if env_config_dir:
-            self._path = PurePath(env_config_dir)
+            groot = PurePath(env_config_dir)
         else:
             if platform.system() == 'Linux':
                 xdg_cfg_home = os.environ['XDG_CONFIG_HOME']
                 xdg_home = PurePath(xdg_cfg_home if xdg_cfg_home else '/etc')
-                self._path = xdg_home / APP_NAME
+                groot = xdg_home / APP_NAME
             elif platform.system() == 'Windows':
-                self._path = PurePath(os.getenv('PROGRAMDATA')) / APP_NAME
+                groot = PurePath(os.getenv('PROGRAMDATA')) / APP_NAME
             else:
                 raise RuntimeError('CramPaths Unsupported platform: ' + platform.system())
 
-        self.logger.info('Configuration directory: ' + self._path.as_posix())
+        self.logger.info('Configuration directory: ' + groot.as_posix())
 
-        self.csv = (self._path / (APP_NAME + instance + '.csv')).as_posix()
-        self.stop = (self._path / (APP_NAME + instance + '.stop')).as_posix()
-        self.groups = (self._path / (APP_NAME + '.groups' + instance + '.yaml')).as_posix()
+        self.csv = (groot / (APP_NAME + instance + '.csv')).as_posix()
+        self.stop = (groot / (APP_NAME + instance + '.stop')).as_posix()
+        self.groups = (groot / (APP_NAME + '.groups' + instance + '.yaml')).as_posix()
 
-        self.defaults = (self._path / ('defaults' + instance + '.yaml')).as_posix()
+        self.defaults = (groot / ('defaults' + instance + '.yaml')).as_posix()
 
         # Build the correct configuration file name for this instance.
-        self.configuration = (self._path / (APP_NAME + instance + '.yaml')).as_posix()
+        self.configuration = (groot / (APP_NAME + instance + '.yaml')).as_posix()
 
 
 
