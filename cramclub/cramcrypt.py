@@ -12,7 +12,10 @@ from cramlog import CramLog
 
 
 
-class CramCrypt(object):
+class CramCrypt():
+    """
+    Wrapper for cryptographic engine.
+    """
     passphrase = None
     iv = None
     crypter = None
