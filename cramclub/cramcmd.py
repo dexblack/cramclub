@@ -53,12 +53,12 @@ def secure():
 
 
     secure_keys(cram, crypter, cfg_defaults)
-    save_configuration(cfg_defaults, cram.paths.defaults, cram.logger)
+    save_configuration(cfg_defaults, cram.paths.defaults)
 
     # Instance configuration file
     cfg_instance = load_configuration(cram.paths.configuration, cram.logger)
     secure_keys(cram, crypter, cfg_instance)
-    save_configuration(cfg_instance, cram.paths.configuration, cram.logger)
+    save_configuration(cfg_instance, cram.paths.configuration)
 
 
 def start():
