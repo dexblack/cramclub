@@ -80,6 +80,7 @@ def start():
             salt=b64decode(cram.cfg['salt'].encode('ascii'))
         )
     )
+    cram.logger.log(70, 'Pass phrase accepted. Running ...')
 
     # Clean up from previous 'stop' command
     if cramio.stop_process():
