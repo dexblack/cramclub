@@ -18,10 +18,10 @@ class CramCrypt(object):
     crypter = None
 
     def __init__(self, initial_value, salt):
-        '''
+        """
         `initial_value` base64 encoded bytes[16].
         `salt` base64 encoded bytes[16].
-        '''
+        """
         self.logger = CramLog.instance()  # pylint: disable-msg=E1102
         self.passphrase = getpass(
             'Please type the encryption pass phrase and press Enter: ')
@@ -35,15 +35,18 @@ class CramCrypt(object):
             raise RuntimeError('Failed to create cryptographic engine.')
 
     def build_engine(self):
+        """
+        Cryptographic engine type and mode.
+        """
         return AES.new(key=self.secure_key, mode=AES.MODE_CBC, iv=self.iv)
 
 
     def encrypt(self, value):
-        '''
+        """
         Use AES CBC mode to encrypt the value.
         `value` is a UTF-8 string.
         Returns base64 encoded ascii string.
-        '''
+        """
         crypter = self.build_engine()
 
         seq = value.encode()
@@ -54,11 +57,11 @@ class CramCrypt(object):
 
 
     def decrypt(self, value):
-        '''
+        """
         Use AES CBC mode to decrypt the value.
         `value` is a base64 encoded string or byte sequence.
         Returns decrypted value as UTF-8 string.
-        '''
+        """
         crypter = self.build_engine()
 
         encrypted = b64decode(value.encode())
